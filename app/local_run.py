@@ -31,6 +31,36 @@ def _port_free(host: str, port: int) -> bool:
     return True
 
 
+def _lan_names() -> list[str]:
+    """This computer's name and private network addresses: where other computers reach it."""
+    import ipaddress
+
+    names: list[str] = []
+    try:
+        host = socket.gethostname()
+        addresses = socket.getaddrinfo(host, None, socket.AF_INET)
+    except OSError:
+        return names
+    if host and "." not in host:
+        names.append(host.lower())
+    for *_, sockaddr in addresses:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_private and not ip.is_loopback and not ip.is_link_local and str(ip) not in names:
+            names.append(str(ip))
+    return names
+
+
+def _cert_names(path: Path) -> set[str]:
+    from cryptography import x509
+
+    try:
+        cert = x509.load_pem_x509_certificate(path.read_bytes())
+        san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    except (OSError, ValueError, x509.ExtensionNotFound):
+        return set()
+    return {n.lower() for n in san.get_values_for_type(x509.DNSName)} |         {str(ip) for ip in san.get_values_for_type(x509.IPAddress)}
+
+
 def _database_reachable(url: str) -> bool:
     """For a network database (PostgreSQL …): is anything listening at its host and port?"""
     from sqlalchemy.engine import make_url
@@ -123,21 +153,27 @@ def _certificate(make_certs) -> dict[str, str]:  # type: ignore[no-untyped-def]
                 "cert": tls["cert"], "cert_key": tls["key"], "ca": ""}
     certs = Path("certs")
     note = f"from {certs}"
+    # Listening on the network: the local certificate also names this computer, so other computers that trust the
+    # local CA can use it. Re-issuing keeps the same CA.
+    names = _lan_names() if runtime.listen_address() == runtime.ALL_NETWORKS else []
     if not (certs / "server.crt").exists() or not (certs / "server.key").exists():
-        paths = make_certs(certs)
+        paths = make_certs(certs, names)
         note = f"created ({paths.ca_cert} is the local CA)"
+    elif not set(names) <= _cert_names(certs / "server.crt"):
+        make_certs(certs, names)
+        note = f"from {certs} (re-issued to add {', '.join(names)})"
     return {"certs": note, "cert": str(certs / "server.crt"), "cert_key": str(certs / "server.key"),
             "ca": str(certs / "ca.crt")}
 
 
 def run(host: str | None = None, port: int = 443, data_dir: Path = DEFAULT_DATA, packs: str | None = None, *,
         sqlite: bool = False, no_sso: bool = False) -> None:
-    """``host`` None: 127.0.0.1, or every network interface once Get started installed a real certificate and
-    chose "accept connections from other computers"."""
+    """``host`` None: every network interface until Get started's "Secure it" step is finished (so setup can be done
+    from another computer), then what that step chose: the network, or this computer only (127.0.0.1)."""
     from app import runtime
 
     os.environ["MSP_DATA_DIR"] = str(data_dir)
-    listen = host or runtime.load_settings().get("listen") or "127.0.0.1"
+    listen = host or runtime.listen_address()
     if not _port_free(listen, port):
         fallback = 8443
         if port == 443 and _port_free(listen, fallback):
@@ -166,6 +202,10 @@ def run(host: str | None = None, port: int = 443, data_dir: Path = DEFAULT_DATA,
     if notes["ca"]:
         print(f"             browsers warn until you trust the CA once:  certutil -user -addstore Root {notes['ca']}")
     print(f"  Listening: {listen}:{port}" + ("  (this computer only)" if listen.startswith("127.") else ""))
+    if listen == runtime.ALL_NETWORKS:
+        others = ", ".join(f"https://{n}" + ("" if port == 443 else f":{port}") for n in _lan_names())
+        print("             every network until Get started's Secure it step is done"
+              + (f"; from other computers: {others}" if others else ""))
     print(line, flush=True)
 
     import asyncio
@@ -181,7 +221,7 @@ def run(host: str | None = None, port: int = 443, data_dir: Path = DEFAULT_DATA,
 
         runtime.apply_settings()
         cert = _certificate(make_certs)
-        listen = host or runtime.load_settings().get("listen") or "127.0.0.1"
+        listen = host or runtime.listen_address()
         # timeout_graceful_shutdown: browsers keep idle connections open, which would hold a rebuild forever
         server = uvicorn.Server(uvicorn.Config(create_app(), host=listen, port=port, ssl_certfile=cert["cert"],
                                                ssl_keyfile=cert["cert_key"], timeout_graceful_shutdown=3))

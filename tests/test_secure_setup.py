@@ -187,3 +187,31 @@ def test_last_local_admin_is_kept(admin):  # type: ignore[no-untyped-def]
     r = admin.patch("/api/admin/users/boss", json={"role": "reader"})
     assert r.status_code == 409 and "break-glass" in r.json()["detail"]
     assert admin.patch("/api/admin/users/boss", json={"disabled": True}).status_code == 409
+
+
+def test_listens_on_every_network_until_secured(admin, monkeypatch):  # type: ignore[no-untyped-def]
+    """Setup can be finished from another computer; afterwards the runner listens where Secure it chose."""
+    from app import runtime
+
+    restarts = []
+    monkeypatch.setattr(runtime, "_restart", lambda: restarts.append(1))
+    assert runtime.listen_address() == runtime.ALL_NETWORKS
+    r = admin.post("/api/admin/secure/step", json={"mode": "local"}).json()
+    assert r["listen"] == runtime.THIS_COMPUTER and r["restart"] == "automatic" and restarts == [1]
+    assert runtime.listen_address() == runtime.THIS_COMPUTER
+    # Choosing again doesn't move the address, so no restart
+    assert admin.post("/api/admin/secure/step", json={"mode": "local"}).json()["restart"] == "none"
+    assert restarts == [1]
+
+
+def test_installed_certificate_decides_the_network(admin, monkeypatch):  # type: ignore[no-untyped-def]
+    from app import runtime
+    from app.services import tls_setup
+
+    monkeypatch.setattr(runtime, "_restart", None)
+    _, _, pem, key_pem = _cert()
+    tls_setup.install_uploaded(cert_pem=pem, key_pem=key_pem, listen_on_network=False)
+    runtime.save_settings(secure_step="secure")
+    assert runtime.listen_address() == runtime.THIS_COMPUTER
+    tls_setup.install_uploaded(cert_pem=pem, key_pem=key_pem, listen_on_network=True)
+    assert runtime.listen_address() == runtime.ALL_NETWORKS

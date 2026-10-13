@@ -156,8 +156,12 @@ class StepChoice(BaseModel):
 async def finish_step(body: StepChoice) -> dict[str, Any]:
     if body.mode not in ("secure", "local"):
         raise HTTPException(400, "mode is 'secure' or 'local'")
+    before = runtime.listen_address()
     runtime.save_settings(secure_step=body.mode)
-    return {"secure_step": body.mode}
+    # Until this step, the local runner answers on every network; now it listens where this step chose.
+    listen = runtime.listen_address()
+    restarting = listen != before and runtime.request_restart()
+    return {"secure_step": body.mode, "listen": listen, "restart": "automatic" if restarting else "none"}
 
 
 # ── Sign-in ──────────────────────────────────────────────────────────────────────────────────────────────────

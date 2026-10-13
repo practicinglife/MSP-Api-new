@@ -851,11 +851,21 @@ function certUpload() {
 
 function certLocal() {
   $("cert-form").innerHTML = `<p class="m">Keeps the local test certificate and this computer's address. Fine for trying things out; other computers can't
-      use the app, and the install checklist keeps flagging it until a real certificate is installed.</p>
+      use the app (until now it answered on every network, so setup could be done from anywhere), and the install checklist keeps
+      flagging it until a real certificate is installed.</p>
     <button type="button" id="lo-go" class="quiet">Only testing on this computer</button> <span id="lo-out" class="m"></span>`;
   $("lo-go").onclick = async () => {
-    await api("/api/admin/secure/step", {method: "POST", body: JSON.stringify({mode: "local"})});
-    sec.secure_step = "local"; $("lo-out").innerHTML = '<span class="ok">Noted. Continue below.</span>';
+    const r = await api("/api/admin/secure/step", {method: "POST", body: JSON.stringify({mode: "local"})});
+    sec.secure_step = "local";
+    if (r.restart === "automatic") {
+      $("lo-out").innerHTML = '<span class="spin"></span> Restarting for this computer only…';
+      await new Promise(res => setTimeout(res, 2500));
+      for (let i = 0; i < 40; i++) {
+        try { if ((await fetch("/health", {cache: "no-store"})).ok) break; } catch {}
+        await new Promise(res => setTimeout(res, 1500));
+      }
+    }
+    $("lo-out").innerHTML = '<span class="ok">Noted. Continue below.</span>';
   };
 }
 

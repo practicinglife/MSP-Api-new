@@ -109,6 +109,18 @@ def apply_settings() -> None:
         _set(var, wanted.get(var))
 
 
+ALL_NETWORKS, THIS_COMPUTER = "0.0.0.0", "127.0.0.1"
+
+
+def listen_address() -> str:
+    """Where ``app.cli run`` listens: every network until Get started's "Secure it" step is finished (so setup can
+    be done from another computer), then what that step chose: the network, or this computer only."""
+    settings = load_settings()
+    if not settings.get("secure_step"):
+        return ALL_NETWORKS
+    return str(settings.get("listen") or THIS_COMPUTER)
+
+
 _restart: Callable[[], None] | None = None
 
 

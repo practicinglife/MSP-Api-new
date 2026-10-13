@@ -32,7 +32,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.x509.oid import ExtensionOID, NameOID
 
-from app.runtime import data_dir, load_settings, save_settings
+from app.runtime import ALL_NETWORKS, THIS_COMPUTER, data_dir, load_settings, save_settings
 
 log = structlog.get_logger(__name__)
 
@@ -99,7 +99,7 @@ def _install(domain: str, cert_pem: bytes, key_pem: bytes, source: str, listen_o
     save_settings(tls={"source": source, "domain": domain, "cert": str(cert_path), "key": str(key_path),
                        "expires": info["expires"]},
                   external_url=f"https://{domain}" + ("" if port == 443 else f":{port}"),
-                  **({"listen": "0.0.0.0"} if listen_on_network else {}))
+                  listen=ALL_NETWORKS if listen_on_network else THIS_COMPUTER)
     log.info("tls.installed", domain=domain, source=source, expires=info["expires"])
     return {"domain": domain, "source": source, **info}
 

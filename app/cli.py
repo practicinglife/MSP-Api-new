@@ -224,7 +224,8 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("migrate", help="Bring the database schema up to date (also runs at app startup)")
     r = sub.add_parser("run", help="Start the app on this computer (HTTPS, SQLite + generated key when not configured)")
     r.add_argument("--host", default=None,
-                   help="Address to listen on (default 127.0.0.1, or the network once Get started set that up)")
+                   help="Address to listen on (default: every network until Get started's Secure it step is done, "
+                        "then what it chose)")
     r.add_argument("--port", type=int, default=443, help="HTTPS port (default 443, falls back to 8443)")
     r.add_argument("--data", default="data", help="Folder for the SQLite database and generated key (default data/)")
     r.add_argument("--packs", default=None, help="Packs to turn on (default msp; 'none' for core only)")
