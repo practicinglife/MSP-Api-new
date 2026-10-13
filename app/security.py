@@ -19,6 +19,10 @@ Authorization — four roles, each including the ones before it (``app/auth/prin
   local copies, write modes, connection import/export.
 * **Admin**: the rest of ``/api/admin/*`` and ``/admin/*`` — users, keys, sign-in, certificates, packs, audit.
 * OAuth access tokens are bound to the MCP server they were issued for (RFC 8707 audience).
+* Scopes (``<platform|*>:<read|write>``) on keys and tokens: core connections check them per operation; the MSP
+  pack's routes (``app.packs.msp.scope_applies``) need ``*:read``, and ``*:write`` where they need the Editor role
+  (people signing in always have ``*:read``). ``/msp/mcp`` checks per tool call instead, so tools/list still works;
+  the vendor proxy checks ``<platform>:read|write`` itself.
 * Direct writes to a vendor additionally pass the platform's write mode (``app/auth/write_mode.py``).
 """
 
@@ -35,7 +39,7 @@ from urllib.parse import quote, urlparse
 import structlog
 
 from app.auth import audit, ratelimit
-from app.auth.principal import ROLE_ADMIN, ROLE_APPROVER, Principal, current_principal, resolve
+from app.auth.principal import READ, ROLE_ADMIN, ROLE_APPROVER, WRITE, Principal, current_principal, resolve
 from app.mcp.protocol import MCP_PATH, MCP_PATH_RE
 from app.org_profile import EDGE_DOMAIN, external_base_url, OFFICE_IPS
 
@@ -76,6 +80,7 @@ _APPROVER_ONLY = re.compile(
 # themselves, so the generic "non-GET needs Editor" rule doesn't apply.
 _SELF_CHECKED = re.compile(r"^/api/connections/[^/]+/operations/[^/]+/call$")
 _MCP_PATHS = MCP_PATH_RE  # MCP servers audit each tool call themselves
+ORG_MCP_PATH = "/msp/mcp"  # checks the MSP scope per tool call (app/api/org_mcp.py), so tools/list still works
 
 # Recent requests that came through the internet edge (for troubleshooting by admins).
 EDGE_LOG: deque[dict[str, Any]] = deque(maxlen=200)
@@ -207,13 +212,23 @@ class NetworkBoundaryMiddleware:
                 await _audit(principal, method, path, status_holder["status"], src)
 
 
+def _msp_scope_denied(principal: Principal, path: str, action: str) -> tuple[int, str] | None:
+    """The MSP pack's scope rule (see app/packs/msp): its routes need ``*:read`` / ``*:write``."""
+    from app.packs.msp import scope_applies, scope_denied
+
+    if path == ORG_MCP_PATH or not scope_applies(path):
+        return None
+    message = scope_denied(principal, action)
+    return (403, message) if message else None
+
+
 def _authorize(principal: Principal, method: str, path: str, headers: dict[str, str]) -> tuple[int, str] | None:
     if _ADMIN_PATHS.match(path):
         needed = ROLE_APPROVER if _ADMIN_FOR_APPROVERS.match(path) else ROLE_ADMIN
         if not principal.has_role(needed):
             return 403, f"Requires the {needed} role"
     if method in _SAFE_METHODS:
-        return None
+        return _msp_scope_denied(principal, path, READ)
     api_path = path.startswith(("/api/", "/admin/"))
     if principal.kind == "session" and (api_path or _MCP_PATHS.match(path)):
         # CSRF: a browser POST from another site carries an Origin that doesn't match our host.
@@ -221,16 +236,16 @@ def _authorize(principal: Principal, method: str, path: str, headers: dict[str, 
         if origin and (urlparse(origin).netloc or "").lower() != headers.get("host", "").lower():
             return 403, "Cross-site request refused"
     if not api_path:
-        return None
+        return _msp_scope_denied(principal, path, READ)
     if _APPROVER_ONLY.match(path) and not principal.has_role(ROLE_APPROVER):
         return 403, "Connections, credentials and integration settings require the Approver role"
     if _PROPOSE_ONLY.match(path) or _ADMIN_PATHS.match(path) or _SELF_CHECKED.match(path):
-        return None
+        return _msp_scope_denied(principal, path, READ)
     if not principal.can_edit:
         return 403, "Requires the Editor role"
     if not any(s.endswith(":write") for s in principal.scopes):
         return 403, "This credential is read-only"
-    return None
+    return _msp_scope_denied(principal, path, WRITE)
 
 
 async def _audit(principal: Principal, method: str, path: str, status: int, ip: str | None) -> None:

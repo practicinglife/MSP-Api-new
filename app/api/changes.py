@@ -1,6 +1,7 @@
 """Change requests API + pages.
 
-* Propose: anyone (dashboard, MCP/Claude, workflows) — ``POST /api/changes``
+* Propose: anyone (dashboard, MCP/Claude, workflows) — ``POST /api/changes``; an MSP pack command needs the
+  pack's scope ``*:read`` (``app/packs/msp``), like the rest of the pack
 * Submit: an Editor (signed in) — ``POST /api/changes/{id}/submit``
 * Final approval: ``MSPTools.Approver`` only — ``POST /api/changes/{id}/approve`` (the only path that executes)
 """
@@ -27,6 +28,7 @@ from app.services import changes as svc
 from app.services.commands import CommandError, get_command, list_commands
 
 router = APIRouter(tags=["changes"])
+_CORE_COMMANDS = {"connection_call"}  # every other command comes from the MSP pack
 
 
 class ProposeBody(BaseModel):
@@ -71,6 +73,12 @@ async def command(name: str) -> dict[str, Any]:
 @router.post("/api/changes")
 async def propose(request: Request, body: ProposeBody) -> dict[str, Any]:
     who, source = await _requester(request)
+    if body.command not in _CORE_COMMANDS:
+        from app.packs.msp import scope_denied
+
+        p = getattr(request.state, "principal", None) or get_current()
+        if p is not None and (denied := scope_denied(p, "read")):
+            raise HTTPException(403, denied)
     try:
         c = await svc.propose(body.command, body.params, source=source, requested_by=who)
     except svc.ChangeError as exc:

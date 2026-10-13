@@ -31,6 +31,9 @@ Every client needs one of these:
   `python -m app.cli create-key "Pat - laptop" --role user --scope "petstore:read" --expires-days 365`
   Keys carry a role (`user` reads, `editor` may write) and scopes (`<connection>:read|write`, or `*`). A key
   scoped to `petstore:read` sees only the Petstore server; the hub lists only Petstore for it.
+  `/msp/mcp` needs `*:read` (and `*:write` for tools that need the Editor role, such as
+  `refresh_client_registry`): it combines every vendor's data. Without it tools/list still answers, but each tool
+  call returns "This credential's scopes don't include the MSP tools (needs *:read)".
 - **OAuth** (claude.ai connectors). The person signs in with single sign-on (or enters a key). The token is
   bound to the one server it was issued for, so a token for `/mcp/petstore` is refused at `/mcp/helpdesk` and at
   `/mcp`.

@@ -3,7 +3,8 @@
 * ``POST /msp/mcp`` — MCP (streamable HTTP, stateless JSON responses). Curated, read-only
   tools backed by the static database (client registry, stored devices, snapshots) plus live
   PSA ticket reads. Org skills are also exposed as MCP prompts. Implemented directly on
-  JSON-RPC so it does not depend on the ``mcp`` / ``fastapi-mcp`` package versions.
+  JSON-RPC so it does not depend on the ``mcp`` / ``fastapi-mcp`` package versions. Every tool call needs the
+  scope ``*:read`` (``*:write`` for tools that need the Editor role; see ``app/packs/msp``) — tools/list doesn't.
 * ``/msp/plugin/*`` — Claude Code plugin (marketplace zip + installers), per-skill zips for
   claude.ai org upload, and a VS Code / Copilot MCP config.
 * ``GET /msp/connect`` — setup page for staff.
@@ -32,6 +33,7 @@ from app.auth import audit
 from app.auth.principal import Principal, get_current, internal_headers
 from app.mcp.protocol import PROTOCOLS
 from app.mcp.protocol import rpc_error as _rpc_error
+from app.packs.msp import scope_denied
 
 log = structlog.get_logger(__name__)
 
@@ -409,8 +411,11 @@ async def _handle(request: Request, msg: Any) -> dict[str, Any] | None:
                 return _rpc_error(mid, -32602, f"Unknown tool: {params.get('name')}")
             principal = _principal(request)
             args = params.get("arguments") or {}
-            if not tool.read_only and tool.name not in _PROPOSAL_TOOLS and not principal.can_edit:
+            needs_editor = not tool.read_only and tool.name not in _PROPOSAL_TOOLS
+            if needs_editor and not principal.can_edit:
                 ok, data = False, f"{tool.name} requires the Editor role"
+            elif denied := scope_denied(principal, "write" if needs_editor else "read"):
+                ok, data = False, denied  # the pack's scope rule (app/packs/msp): *:read, *:write for Editor tools
             else:
                 ok, data = await _run_tool(request, tool, args)
             log.info("org_mcp.tool_call", tool=tool.name, ok=ok, who=principal.id)

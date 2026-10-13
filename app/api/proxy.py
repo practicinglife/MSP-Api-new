@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from app.api.connector_health import get_connectors
 from app.db.repository import ApiDiscoveryRepository, get_session_factory
+from app.auth.principal import READ, get_current
 from app.auth.write_mode import enforce_direct_write
 from app.services.cwm_gateway import api_request as cwm_api_request
 
@@ -198,6 +199,10 @@ async def proxy_request(
     method = request.method.upper()
     if method != "GET":
         await enforce_direct_write(platform)
+    else:  # the MSP pack's scope rule doesn't cover the proxy: each platform's own read scope does
+        principal = get_current()
+        if principal is None or not principal.allows(platform, READ):
+            raise HTTPException(403, f"This credential's scopes don't include {platform} (needs {platform}:read)")
 
     # Parse params from query string
     params: dict[str, str] = dict(request.query_params)
