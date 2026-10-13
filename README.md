@@ -29,8 +29,6 @@ write mode and recorded in an audit log.
 - [Repository Structure](#repository-structure)
 - [Security](#security)
 - [Project Status](#project-status)
-- [Contributing](#contributing)
-- [Support the Project](#support-the-project)
 - [Disclaimer](#disclaimer)
 - [License](#license)
 
@@ -636,10 +634,6 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest
 ruff check app tests
 ```
-
----
-
-
 
 ---
 
