@@ -107,6 +107,26 @@ connections are read-only until an Approver changes their write mode. See
 
 The MSP dashboard is then at `/`. See [MSP-PACK.md](MSP-PACK.md).
 
+## Settings reference
+Settings come from `.env` (template: [`.env.example`](../.env.example)) or from the **Get started** wizard (saved in
+`data/settings.json`). Values in `.env` always win.
+
+| Setting | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL (or SQLite) connection string |
+| `MSP_MASTER_KEY` | Encrypts stored credentials. Generate with `python -m app.cli gen-master-key`; keep it out of database backups |
+| `MSP_PACKS` | `msp` to turn on the MSP pack; empty for core only |
+| `MSP_EXTERNAL_BASE_URL` / `MSP_PUBLIC_BASE_URL` | The address AI clients and OAuth use |
+| `MSP_ENTRA_*` / `MSP_OIDC_*` | Single sign-on (Microsoft 365 or any OpenID Connect provider), role claim mapping |
+| `MSP_WRITE_MODE_DEFAULT`, `MSP_WRITE_MODE_<API>` | Starting write modes (default `read_only`) |
+| `MSP_BLOCK_PRIVATE_TARGETS` | Refuse connections to private and loopback addresses |
+| `MSP_RATE_LIMIT_PER_MIN`, `MSP_RATE_LIMIT_ANON_PER_MIN` | Rate limits |
+| `MSP_EDGE_DOMAIN`, `MSP_OFFICE_IPS` | Internet edge name, and addresses treated as the office |
+| `MSP_API_DIRECTORY` | `off` disables the public API directory search |
+| `MSP_CERT_NAMES` | Extra names and addresses for the local HTTPS certificate (e.g. the Docker host) |
+
+Admin commands: `python -m app.cli --help`.
+
 ## Backups
 Back up the database and keep `MSP_MASTER_KEY` with the backup, stored separately. Without the key,
 credentials in the backup can't be read.
