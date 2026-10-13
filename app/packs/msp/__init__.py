@@ -12,10 +12,20 @@ Turn on with ``MSP_PACKS=msp``. Everything it adds lives behind this module:
 
 The code itself stays in ``app/api``, ``app/services`` and ``app/connectors``; this module is the single place
 that decides whether any of it is reachable.
+
+**Scopes.** Connection keys and OAuth tokens carry scopes ``<platform|*>:<read|write>``. The pack mixes data
+from every vendor in one database, so it is all-or-nothing: a credential may use it (``/msp/mcp`` tool calls,
+every route of the routers below, MSP change commands, saved ``/reports``) only with ``*:read``; pack routes that
+need the Editor role also need ``*:write``. A key scoped to single platforms (``petstore:read``, even
+``connectwise_psa:read``) gets 403 / an MCP tool error. The one exception is the raw vendor proxy
+``/api/proxy/<platform>/…``, which checks that platform's own scope (``<platform>:read``, ``<platform>:write``).
+People signing in always get ``*:read`` (Editors and up ``*:write``), so they are unaffected. Enforced by
+``app/security.py`` (``scope_applies``), ``app/api/org_mcp.py``, ``app/api/changes.py`` and ``app/api/proxy.py``.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import structlog
@@ -45,6 +55,38 @@ _ROUTERS = [
     ("app.api.av_review", "router"), ("app.api.discrepancies", "router"), ("app.api.helpdesk", "router"),
     ("app.packs.msp.routes", "router"),
 ]
+
+
+# Paths the scope rule (see the module docstring) covers, filled on first use.
+_PATHS: list[re.Pattern[str]] = []
+_EXTRA_PATHS = [re.compile(r"^/reports(/.*)?$")]  # saved reports (a StaticFiles mount, not a router)
+_OWN_SCOPES = re.compile(r"^/api/proxy/")  # checks <platform>:read / <platform>:write itself (app/api/proxy.py)
+
+
+def scope_applies(path: str) -> bool:
+    """Does the pack's ``*:read`` / ``*:write`` rule apply to ``path``: served by the active pack, not the proxy?"""
+    from app import packs
+
+    if not packs.is_active("msp") or _OWN_SCOPES.match(path):
+        return False
+    if not _PATHS:
+        import importlib
+
+        for mod, attr in _ROUTERS:
+            try:
+                router = getattr(importlib.import_module(mod), attr)
+            except Exception:  # noqa: BLE001 — a disabled router serves nothing
+                continue
+            _PATHS.extend(r.path_regex for r in router.routes if getattr(r, "path_regex", None) is not None)
+        _PATHS.extend(_EXTRA_PATHS)
+    return any(p.match(path) for p in _PATHS)
+
+
+def scope_denied(principal: Any, action: str = "read") -> str | None:
+    """Why ``principal``'s scopes don't cover the pack for ``action`` ("read" / "write"), or None if they do."""
+    if principal.allows("*", action):
+        return None
+    return f"This credential's scopes don't include the MSP tools (needs *:{action})"
 
 
 def register(app: FastAPI) -> None:

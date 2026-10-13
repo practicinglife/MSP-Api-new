@@ -32,6 +32,14 @@ data.
   INSTALL.md and in Get started.
 - **Scopes** on keys and tokens limit which APIs a caller can see at all. That includes searches, MCP servers,
   the hub and stored local copies.
+- **The MSP pack** (when enabled) mixes every vendor's data in one database, so its scope rule is all-or-nothing:
+  `/msp/mcp` tool calls, its REST API (`/api/clients`, `/api/db`, `/api/tickets`, `/api/av`, `/api/helpdesk`,
+  `/api/discrepancies`, `/api/onboarding`, …), MSP change commands and saved reports need **`*:read`**; its routes
+  that need the Editor role also need **`*:write`**. A key scoped to `petstore:read` (or even
+  `connectwise_psa:read`) is refused with "This credential's scopes don't include the MSP tools (needs *:read)".
+  The raw vendor proxy `/api/proxy/<platform>/…` instead checks that platform's own scope
+  (`<platform>:read` / `<platform>:write`). People signing in always have `*:read` (Editors and up `*:write`), and
+  claude.ai connectors signed in with single sign-on get the same, so neither is affected.
 - **Write modes** per API:
   - read-only is the default for every new connection
   - direct lets Editors write
