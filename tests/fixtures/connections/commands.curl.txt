@@ -1,0 +1,16 @@
+# name: List devices
+curl -s https://rmm.example.com/api/v1/devices?status=online&limit=50 \
+  -H "Authorization: Bearer tok-abc-123" \
+  -H "Accept: application/json"
+
+# name: Get device
+curl https://rmm.example.com/api/v1/devices/<device_id> -H "Authorization: Bearer tok-abc-123"
+
+# name: Create note
+curl -X POST "https://rmm.example.com/api/v1/devices/{{device_id}}/notes" \
+  -H "Authorization: Bearer tok-abc-123" \
+  -H "Content-Type: application/json" \
+  --data-raw '{"text": "$NOTE_TEXT", "pinned": false}'
+
+# name: OData style query
+curl "https://rmm.example.com/odata/Devices?$filter=Online%20eq%20true&$top=5" -H "Authorization: Bearer tok-abc-123"

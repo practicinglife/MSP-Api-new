@@ -1,0 +1,32 @@
+# ─── DEV mode overrides — used on the Linux server for live editing ───
+# Usage on the Linux server:
+#   cd /opt/msp-api-tools
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# What this gives you:
+#   • app/ bind-mount kept alive (sync from Windows lands here)
+#   • uvicorn --reload watches app/ and restarts on every save (~1 s)
+#   • Postgres exposed on host port 5432 so you can DBeaver into it from Windows
+#   • DEBUG-level logging so you see every request
+#   • ngrok stays available (run with --profile tunnel if you want a public URL)
+#
+# Pair this with deploy/sync-to-server.ps1 on the Windows side.
+
+services:
+  app:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    volumes:
+      - ./app:/app/app                # live-mount the synced source
+      - ./app/templates:/app/app/templates
+      - ./app/static:/app/app/static
+      - ./reports:/app/reports        # persist generated PDFs/HTML across restarts
+    environment:
+      LOG_LEVEL: DEBUG
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"   # needed when files arrive via SMB/sync rather than inotify
+    restart: unless-stopped
+
+  postgres:
+    ports:
+      - "5432:5432"                   # expose so DBeaver/pgAdmin from Windows can hit it
+    restart: unless-stopped

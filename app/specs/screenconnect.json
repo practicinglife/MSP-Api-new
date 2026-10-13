@@ -1,0 +1,313 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "ConnectWise ScreenConnect RESTful API Manager",
+    "description": "Synthetic OpenAPI spec generated from ScreenConnect RESTful API Manager documentation and Session Manager API reference. The RESTful API extension creates HTTP endpoints to retrieve and manage ScreenConnect session information.",
+    "version": "1.0.8"
+  },
+  "servers": [
+    {
+      "url": "{screenconnect_url}/App_Extensions/{extension_id}/Service.ashx",
+      "description": "ScreenConnect RESTful API Manager extension endpoint",
+      "variables": {
+        "screenconnect_url": {
+          "default": "https://control.example.com",
+          "description": "Your ScreenConnect server URL"
+        },
+        "extension_id": {
+          "default": "2d558935-686a-4bd0-9991-07539f5fe749",
+          "description": "RESTful API Manager extension GUID"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/AddNoteToSession": {
+      "post": {
+        "summary": "Add a note to a session",
+        "description": "Adds a note body to the specified session. Requires extension version >= 1.0.6.",
+        "tags": ["Sessions"],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", "noteBody"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Note added successfully" }
+        }
+      }
+    },
+    "/CreateSession": {
+      "post": {
+        "summary": "Create a new session",
+        "description": "Creates a new ScreenConnect session with the specified type, name, visibility, code, and custom property values.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["SessionType", "name", true, "code", ["customProp1", "customProp2"]]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created session object",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/GetSessionBySessionID": {
+      "get": {
+        "summary": "Get session by session ID",
+        "description": "Returns a list of sessions matching the given session ID.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/GetSessionDetailsBySessionID": {
+      "get": {
+        "summary": "Get detailed session info by session ID",
+        "description": "Returns detailed information about a session identified by its GUID.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["25950dd7-0230-4a72-9409-0b8c489684a2"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session details object",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/GetSessionsByFilter": {
+      "get": {
+        "summary": "Get sessions by filter expression",
+        "description": "Returns sessions matching the specified filter string.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionFilter"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/GetSessionsByName": {
+      "get": {
+        "summary": "Get sessions by name",
+        "description": "Returns sessions matching the given session name.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/SendCommandToSession": {
+      "post": {
+        "summary": "Send a command to a session",
+        "description": "Sends a command string to the specified session for execution.",
+        "tags": ["Commands"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", "command"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Command sent successfully" }
+        }
+      }
+    },
+    "/SendMessageToSession": {
+      "post": {
+        "summary": "Send a message to a session",
+        "description": "Sends a message from the host to the specified session.",
+        "tags": ["Commands"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", "byHost", "message"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Message sent successfully" }
+        }
+      }
+    },
+    "/SendToolboxItemToSession": {
+      "post": {
+        "summary": "Send a toolbox item to a session",
+        "description": "Sends a named toolbox item to the specified session.",
+        "tags": ["Commands"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", "toolboxItemName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Toolbox item sent successfully" }
+        }
+      }
+    },
+    "/UpdateSessionCustomProperties": {
+      "post": {
+        "summary": "Update custom properties for a session",
+        "description": "Updates the custom properties of the specified session with new values.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", ["prop1Value", "prop2Value"]]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Custom properties updated" }
+        }
+      }
+    },
+    "/UpdateSessionName": {
+      "post": {
+        "summary": "Update the name of a session",
+        "description": "Renames the specified session to a new name.",
+        "tags": ["Sessions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "type": "string" },
+                "example": ["sessionID", "newName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session name updated" }
+        }
+      }
+    }
+  }
+}

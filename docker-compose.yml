@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: msp_tools
+      POSTGRES_USER: postgres
+      # Set POSTGRES_PASSWORD in .env for new installs. An existing data volume keeps the password
+      # it was created with, so only change it here after changing it inside Postgres too.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:5432:5432"   # local tools only, never the LAN
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mspnet
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    volumes:
+      - ./app:/app/app
+    # Hot-reload on code changes (the ./app volume mount makes edits live on
+    # disk; --reload makes uvicorn pick them up without a manual restart).
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/msp_tools
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - mspnet
+
+  # Exposes the app publicly via ngrok tunnel.
+  # Dashboard: http://localhost:4040
+  # If you have a paid static domain set NGROK_DOMAIN in .env and uncomment
+  # the static-domain command below; otherwise the dynamic URL is printed in
+  # the container logs on each startup.
+  # DISABLED by default (2026-10-10): it published the whole app without auth.
+  # External access goes through deploy/edge (nginx + TLS + connection keys).
+  # Only starts with:  docker compose --profile tunnel up -d
+  ngrok:
+    profiles: ["tunnel"]
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command: http --domain=${NGROK_DOMAIN:-} app:8000 --log=stdout
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"   # ngrok inspection dashboard
+    depends_on:
+      - app
+    networks:
+      - mspnet
+
+  # Forward proxy that injects the ngrok-skip-browser-warning header so
+  # browsers and AI agents don't hit the ngrok interstitial page.
+  # Access your API through:  http://localhost:8088
+  # NGROK_HOST is substituted into the nginx config via envsubst at container start.
+  ngrok-proxy:
+    profiles: ["tunnel"]
+    image: nginx:alpine
+    restart: unless-stopped
+    environment:
+      NGROK_HOST: ${NGROK_HOST}
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - "8088:80"
+    depends_on:
+      - ngrok
+    networks:
+      - mspnet
+
+networks:
+  mspnet:
+    driver: bridge
+

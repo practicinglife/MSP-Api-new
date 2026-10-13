@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fictional OData V4 service for tests. -->
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Shop" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="Product">
+        <Key><PropertyRef Name="ID"/></Key>
+        <Property Name="ID" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="Name" Type="Edm.String">
+          <Annotation Term="Core.Description" String="Product name shown to customers"/>
+        </Property>
+        <Property Name="Price" Type="Edm.Decimal"/>
+      </EntityType>
+      <Function Name="MostExpensive">
+        <Parameter Name="Top" Type="Edm.Int32"/>
+        <ReturnType Type="Collection(Shop.Product)"/>
+      </Function>
+      <Action Name="ResetPrices">
+        <Parameter Name="Percent" Type="Edm.Double"/>
+      </Action>
+      <EntityContainer Name="Container">
+        <EntitySet Name="Products" EntityType="Shop.Product"/>
+        <FunctionImport Name="MostExpensive" Function="Shop.MostExpensive"/>
+        <ActionImport Name="ResetPrices" Action="Shop.ResetPrices"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

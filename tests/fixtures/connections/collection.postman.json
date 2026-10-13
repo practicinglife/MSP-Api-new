@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "Helpdesk (test)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Fictional collection for tests."
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {"key": "key", "value": "X-API-Key", "type": "string"},
+      {"key": "value", "value": "{{apiKey}}", "type": "string"},
+      {"key": "in", "value": "header", "type": "string"}
+    ]
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "https://helpdesk.example.com/api"},
+    {"key": "apiKey", "value": "collection-secret-123"},
+    {"key": "pageSize", "value": "25"}
+  ],
+  "item": [
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "List open tickets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Accept", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/tickets?status=open&size={{pageSize}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"],
+              "query": [{"key": "status", "value": "open"}, {"key": "size", "value": "{{pageSize}}"}]
+            }
+          }
+        },
+        {
+          "name": "Get ticket",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", ":id"],
+              "variable": [{"key": "id", "value": "1001"}]
+            }
+          }
+        },
+        {
+          "name": "Create ticket",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"summary\": \"{{summary}}\", \"priority\": 3}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/tickets"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {"key": "username", "value": "demo"},
+                {"key": "password", "value": ""},
+                {"key": "legacy", "value": "x", "disabled": true}
+              ]
+            },
+            "url": "{{baseUrl}}/login"
+          }
+        }
+      ]
+    }
+  ]
+}

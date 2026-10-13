@@ -1,0 +1,20 @@
+name: onboarding-status
+title: "Onboarding status: {{client}}"
+description: >-
+  After onboarding a new client: is it set up in every tool (PSA, Asio, ScreenConnect, SentinelOne or ESET) and
+  what is still left to do. Use for "is <client> fully set up", "did onboarding finish", "what's left for <client>".
+params:
+  client: {type: string, description: Client id or code}
+steps:
+  - tool: get_client
+    args: {client: "{{client}}"}
+    as: client
+    pick: [client_code, standard_name, legal_name, psa_company_id, av_vendor, compliance, platforms]
+present: |
+  Show a checklist: ConnectWise PSA, Asio, SentinelOne or ESET (whichever av_vendor is), ScreenConnect — ticked
+  when platforms has a link for it.
+  - Asio or the antivirus missing → propose_change('onboard_finish', {client_code}) (creates only what's missing).
+  - Asio present → remind: map the Asio company to the PSA company in the ConnectWise integration if not done.
+  - ScreenConnect missing → normal for a new client until the installer runs: CP1 = standard name, CP2 = Main,
+    CP5 = the Asio site id.
+  - Name drift in compliance.name_drift → apply_standard_name.

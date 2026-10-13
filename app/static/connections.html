@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connections</title>
+<style>
+:root{--bg:#f6f6f8;--card:#fff;--fg:#1d1d1f;--muted:#6a6a72;--line:#dedee3;--accent:#2f6fde;--accent-fg:#fff;
+--ok:#1f7a3a;--warn:#9a6700;--bad:#b3261e;--code:#f2f2f5;--hover:#eef2fb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151517;--card:#1e1e21;--fg:#ececf0;
+--muted:#a0a0a8;--line:#34343a;--accent:#6b9cff;--accent-fg:#0b1020;--ok:#5fd17f;--warn:#e3b341;--bad:#ff8a80;
+--code:#26262a;--hover:#262b36}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;padding:20px 16px}
+main{max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0} h2{font-size:16px;margin:0 0 10px} h3{font-size:15px;margin:14px 0 6px}
+a{color:var(--accent)} .m{color:var(--muted);font-size:13px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0}
+textarea{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+input.grow{flex:1 1 260px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+button{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;cursor:pointer}
+button:hover{background:var(--hover)} button:disabled{opacity:.55;cursor:default}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.danger{color:var(--bad);border-color:var(--bad)} button.small{padding:4px 10px;font-size:13px}
+.b{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line);white-space:nowrap}
+.b.read{color:var(--ok);border-color:var(--ok)} .b.write{color:var(--warn);border-color:var(--warn)}
+.b.kind{color:var(--accent);border-color:var(--accent)} .b.off{color:var(--bad);border-color:var(--bad)}
+.method{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:600}
+pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-word;margin:6px 0;max-height:420px}
+.result{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.result:first-child{border-top:0} .result:hover{background:var(--hover)}
+.result .t{font-weight:600} .result .d{color:var(--muted);font-size:13px;margin-top:2px}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+.hidden{display:none!important}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+.tabs{display:flex;gap:4px;margin:6px 0} .tabs button{padding:5px 12px;font-size:13px}
+.tabs button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.sticky{position:sticky;top:12px}
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <div><h1>Connections</h1><div class="m">Every connected API and data source, and every operation in them.</div></div>
+    <nav class="row" id="nav" aria-label="Pages"><span id="who" class="m"></span></nav>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="q" class="grow" type="search" placeholder="Search all operations — e.g. “open tickets”, “remove device”, “invoice by customer”" aria-label="Search operations" autocomplete="off">
+      <select id="f-conn" aria-label="Connection"><option value="">All connections</option></select>
+      <select id="f-access" aria-label="Access"><option value="">Read &amp; write</option><option value="true">Read only</option><option value="false">Writes only</option></select>
+      <label class="m" style="margin:0;display:flex;gap:6px;align-items:center"><input id="f-pinned" type="checkbox" aria-label="Pinned only"> Pinned</label>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section>
+      <div class="card" id="results-card">
+        <h2 id="results-title">Connections</h2>
+        <div id="results"></div>
+      </div>
+      <div class="card hidden" id="add-card">
+        <h2>Add a connection</h2>
+        <div class="m">Import a definition: every operation in it becomes a tool. Preview first — nothing is saved until you press Save.</div>
+        <label for="a-kind">Kind</label>
+        <select id="a-kind"></select>
+        <div class="m" id="a-kind-help"></div>
+        <label for="a-name">Name</label>
+        <input id="a-name" style="width:100%" placeholder="e.g. Acme PSA">
+        <label for="a-base" id="a-base-label">Base URL</label>
+        <input id="a-base" style="width:100%" placeholder="https://api.example.com/v1 (optional when the definition has it)">
+        <div id="a-def-block">
+          <label>Definition</label>
+          <div class="tabs" role="tablist">
+            <button type="button" data-src="url" class="on">From URL</button>
+            <button type="button" data-src="text">Paste</button>
+            <button type="button" data-src="file">Upload file</button>
+          </div>
+          <input id="a-url" style="width:100%" placeholder="https://… (spec, collection, WSDL, $metadata, endpoint)">
+          <textarea id="a-text" class="hidden" rows="8" placeholder="Paste the definition here"></textarea>
+          <input id="a-file" class="hidden" type="file" accept=".json,.yaml,.yml,.wsdl,.xml,.txt,.graphql,.gql,.sql">
+        </div>
+        <label for="a-auth">Authentication</label>
+        <select id="a-auth"></select>
+        <div id="a-auth-fields"></div>
+        <div class="row" style="margin-top:14px">
+          <button id="a-preview" class="primary" type="button">Preview</button>
+          <button id="a-save" type="button" disabled>Save connection</button>
+          <span id="a-status" class="m"></span>
+        </div>
+        <div id="a-preview-out"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="card sticky" id="detail-card">
+        <div id="detail"><h2>Details</h2><div class="m">Pick a connection or an operation to see it here.</div></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KIND_HELP = {
+  openapi: "OpenAPI 3 / Swagger 2 — JSON or YAML.",
+  postman: "Postman collection v2.0/2.1 — folders, auth, bodies and {{variables}} carry over.",
+  curl: "One or more curl commands. Put “# name: Something” above a command to name it.",
+  soap: "A WSDL. zeep builds the SOAP envelopes for you.",
+  graphql: "Give the endpoint as Base URL and leave the definition empty to introspect — or paste a schema / your own named operations.",
+  odata: "The service URL (its $metadata is read) or paste $metadata. V2, V4 and SAP Gateway.",
+  sql: "A connection string (kept encrypted). Optionally paste saved queries as YAML: - name: …  sql: SELECT …",
+  mongodb: "A mongodb:// connection string (kept encrypted). Read-only tools.",
+  mcp: "Another MCP server: put its URL in Base URL; its tools are served here behind your sign-in and audit.",
+};
+let me = {roles: []}, kinds = {}, connections = [], writeModes = {}, current = null, srcMode = "url";
+const isApprover = () => (me.roles || []).some(r => r === "MSPTools.Approver" || r === "MSPTools.Admin");
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {"Content-Type": "application/json", ...(opts.headers || {})}, ...opts});
+  if (r.status === 401) { location.href = "/auth/login?next=" + encodeURIComponent(location.pathname); throw new Error("Sign in"); }
+  let body = null;
+  try { body = await r.json(); } catch { body = null; }
+  if (!r.ok && r.status !== 202) {
+    const d = body && (body.detail || body.message);
+    throw new Error((typeof d === "string" ? d : JSON.stringify(d)) || `HTTP ${r.status}`);
+  }
+  return {status: r.status, body};
+}
+
+// ── bootstrap ───────────────────────────────────────────────
+async function init() {
+  me = (await api("/auth/me")).body || {roles: []};
+  $("who").textContent = me.signed_in ? `${me.name || me.upn} · ${(me.roles || []).map(r => r.replace("MSPTools.", "")).join(", ")}` : "";
+  try {  // pack pages (e.g. the MSP dashboard) only when that pack is on
+    const info = (await api("/api/packs")).body;
+    const links = [...info.packs.flatMap(p => p.nav || []), {href: "/changes", label: "Changes"},
+                   ...(isApprover() ? [{href: "/setup", label: "Setup"}] : [])];
+    $("nav").insertAdjacentHTML("beforeend", links.map(l => `<a href="${esc(l.href)}">${esc(l.label)}</a>`).join(""));
+  } catch { /* header links are optional */ }
+  kinds = (await api("/api/connections/kinds")).body;
+  $("a-kind").innerHTML = kinds.kinds.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+  $("a-auth").innerHTML = Object.keys(kinds.auth_types).map(a => `<option value="${esc(a)}">${esc(a.replaceAll("_", " "))}</option>`).join("");
+  onKind(); onAuth();
+  if (isApprover()) {
+    $("add-card").classList.remove("hidden");
+    try { writeModes = (await api("/api/admin/write-modes")).body.platforms || {}; } catch { writeModes = {}; }
+  }
+  await loadConnections();
+}
+
+// ── MCP client setup ───────────────────────────────────────
+let mcp = null;
+function connectBlock(url, cfg, open = false, groups = []) {
+  const items = [
+    ["Claude Code (terminal)", cfg.claude_code],
+    ["VS Code — .vscode/mcp.json", JSON.stringify(cfg.vscode, null, 2)],
+    ["Cursor — mcp.json", JSON.stringify(cfg.cursor, null, 2)],
+    ["Claude Desktop chat — claude_desktop_config.json (uses the stdio bridge)", JSON.stringify(cfg.claude_desktop, null, 2)],
+  ];
+  const html = `<details style="margin-top:12px" ${open ? "open" : ""}><summary><b>Use with AI clients</b></summary>
+    <div class="m" style="margin:6px 0">MCP server URL: <code>${esc(url)}</code><br>
+      Each person needs a connection key (an admin creates it; it carries their roles and which connections they may use).
+      Replace <code>&lt;your connection key&gt;</code> with it. claude.ai connectors can use the URL directly and sign in with OAuth
+      when this server is reachable from the internet. For Claude Desktop chat, save
+      <a href="${esc(cfg.bridge_download)}">mcp-bridge.py</a> and point <code>&lt;folder&gt;</code> at it (needs Python 3).</div>
+    ${groups.length ? `<div class="m">Groups (hand-picked operations, each its own server): ${groups.map(g => `<code>${esc(g.url)}</code>`).join(", ")}</div>` : ""}
+    ${items.map(([label, text], i) => `<label>${esc(label)}</label><pre>${esc(text)}</pre>
+      <button class="small" type="button" data-copy="${i}">Copy</button>`).join("")}
+  </details>`;
+  return {html, bind: (root) => root.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(items[+b.dataset.copy][1]); b.textContent = "Copied"; }
+    catch { b.textContent = "Copy failed — select the text"; }
+  })};
+}
+function showHub() {
+  if (!mcp) return;
+  const block = connectBlock(mcp.hub.url, mcp.hub.configs, true);
+  $("detail").innerHTML = `<h2>All connections in one MCP server</h2>
+    <div class="m">The hub lets an AI client search and call every connection you may use, without adding each one.
+    Each connection is also its own MCP server (pick it to see its setup).</div>${block.html}`;
+  block.bind($("detail"));
+}
+
+async function loadConnections() {
+  connections = (await api("/api/connections")).body;
+  try { mcp = (await api("/api/mcp/servers")).body; } catch { mcp = null; }
+  const sel = $("f-conn"), keep = sel.value;
+  sel.innerHTML = `<option value="">All connections</option>` +
+    connections.map(c => `<option value="${esc(c.slug)}">${esc(c.name)}</option>`).join("");
+  sel.value = keep;
+  if (!$("q").value.trim()) renderConnections();
+}
+
+function renderConnections() {
+  $("results-title").textContent = `Connections (${connections.length})`;
+  if (!connections.length) {
+    $("results").innerHTML = `<div class="m">No connections yet.${isApprover() ? " Add one below." : " Ask an Approver to add one."}</div>`;
+    return;
+  }
+  $("results").innerHTML = connections.map(c => `
+    <button class="result" data-conn="${esc(c.slug)}">
+      <div class="row"><span class="t">${esc(c.name)}</span><span class="b kind">${esc(c.kind)}</span>
+        ${c.enabled ? "" : '<span class="b off">disabled</span>'}
+        <span class="m">${c.operations} operations</span></div>
+      <div class="d">${esc(c.base_url || c.description || c.slug)}</div>
+    </button>`).join("") + (mcp ? `<div class="row m" style="margin-top:10px">All connections as one MCP server:
+      <code>${esc(mcp.hub.url)}</code><button class="small" type="button" id="hub-setup">Set up</button></div>` : "");
+  document.querySelectorAll("[data-conn]").forEach(b => b.onclick = () => showConnection(b.dataset.conn).then(revealDetail));
+  if (mcp) $("hub-setup").onclick = () => { showHub(); revealDetail(); };
+}
+
+// ── search ─────────────────────────────────────────────────
+let searchTimer = null;
+function scheduleSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 200); }
+async function runSearch() {
+  const q = $("q").value.trim();
+  if (!q) { renderConnections(); return; }
+  const params = new URLSearchParams({q, limit: "40"});
+  if ($("f-conn").value) params.set("connection", $("f-conn").value);
+  if ($("f-access").value) params.set("read_only", $("f-access").value);
+  if ($("f-pinned").checked) params.set("pinned", "true");
+  try {
+    const res = (await api("/api/search/operations?" + params)).body;
+    $("results-title").textContent = `${res.count} operation${res.count === 1 ? "" : "s"} for “${q}”`;
+    $("results").innerHTML = res.results.length ? res.results.map(opRow).join("") :
+      `<div class="m">Nothing found. Try other words — synonyms and typos are handled.</div>`;
+    bindOps();
+  } catch (e) { $("results").innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
+}
+function opRow(o) {
+  return `<button class="result" data-op="${esc(o.name)}" data-opconn="${esc(o.connection)}">
+    <div class="row"><span class="method">${esc(o.method)}</span><span class="t">${esc(o.title || o.name)}</span>
+      <span class="b ${o.read_only ? "read" : "write"}">${o.read_only ? "read" : "write"}</span>
+      ${o.pinned ? '<span class="b">★ pinned</span>' : ""}${o.deprecated ? '<span class="b off">deprecated</span>' : ""}</div>
+    <div class="d">${esc(o.connection_name || o.connection)} · <code>${esc(o.name)}</code>${o.target ? " · " + esc(o.target) : ""}</div>
+    ${o.description ? `<div class="d">${esc(o.description.slice(0, 180))}</div>` : ""}
+  </button>`;
+}
+function bindOps() {
+  document.querySelectorAll("[data-op]").forEach(b => b.onclick = () => showOperation(b.dataset.opconn, b.dataset.op).then(revealDetail));
+}
+function revealDetail() {  // on phones the details panel sits below the list
+  if (window.matchMedia("(max-width: 900px)").matches) $("detail-card").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+// ── connection details ─────────────────────────────────────
+async function showConnection(slug) {
+  const c = (await api(`/api/connections/${encodeURIComponent(slug)}`)).body;
+  const ops = (await api(`/api/connections/${encodeURIComponent(slug)}/operations?limit=200`)).body;
+  current = {conn: c};
+  const mode = (writeModes[slug] || {}).write_mode || "read_only";
+  const admin = isApprover();
+  const server = mcp && mcp.servers.find(s => s.connection === slug);
+  const connect = server ? connectBlock(server.url, server.configs, false, server.groups) : null;
+  $("detail").innerHTML = `
+    <div class="row"><h2 style="margin:0">${esc(c.name)}</h2><span class="b kind">${esc(c.kind)}</span>
+      ${c.enabled ? "" : '<span class="b off">disabled</span>'}</div>
+    <div class="m">${esc(c.slug)} · ${esc(c.base_url || "no base URL")} · auth: ${esc(c.auth_type)}
+      ${c.secrets_set.length ? "(credentials stored, encrypted)" : ""}</div>
+    ${c.description ? `<p>${esc(c.description)}</p>` : ""}
+    ${admin ? `<div class="row" style="margin:10px 0">
+      <label for="c-mode" style="margin:0">Write mode</label>
+      <select id="c-mode">${["read_only", "direct", "approval"].map(m => `<option ${m === mode ? "selected" : ""} value="${m}">${m.replace("_", "-")}</option>`).join("")}</select>
+      <button class="small" id="c-reimport">Re-import</button>
+      <button class="small" id="c-toggle">${c.enabled ? "Disable" : "Enable"}</button>
+      <button class="small danger" id="c-delete">Delete</button></div>
+      <div class="m">read-only: writes refused · direct: Editors may write · approval: each write becomes a change request.</div>` :
+      `<div class="m">Write mode: ${esc(mode.replace("_", "-"))}</div>`}
+    ${server ? connect.html : ""}
+    <div id="c-local"></div>
+    <h3>Operations (${ops.total})</h3>
+    <div class="m">Pinned operations (★) are also tools of their own on this connection's MCP server.</div>
+    <div>${ops.operations.map(o => opRow({...o, connection: slug, connection_name: c.name})).join("")}</div>`;
+  bindOps();
+  if (server) connect.bind($("detail"));
+  renderConnLocal(slug);
+  if (admin) {
+    $("c-mode").onchange = async (e) => {
+      await api(`/api/admin/write-modes/${encodeURIComponent(slug)}`, {method: "PUT", body: JSON.stringify({write_mode: e.target.value})});
+      writeModes[slug] = {write_mode: e.target.value};
+    };
+    $("c-reimport").onclick = async () => {
+      const r = (await api(`/api/connections/${encodeURIComponent(slug)}/reimport`, {method: "POST", body: "{}"})).body;
+      alert(`Re-imported: ${r.operations} operations (${r.added} new, ${r.removed} removed).`);
+      await loadConnections(); showConnection(slug);
+    };
+    $("c-toggle").onclick = async () => {
+      await api(`/api/connections/${encodeURIComponent(slug)}`, {method: "PATCH", body: JSON.stringify({enabled: !c.enabled})});
+      await loadConnections(); showConnection(slug);
+    };
+    $("c-delete").onclick = async () => {
+      if (!confirm(`Delete the connection “${c.name}” and its ${ops.total} operations?`)) return;
+      await api(`/api/connections/${encodeURIComponent(slug)}`, {method: "DELETE"});
+      $("detail").innerHTML = `<h2>Details</h2><div class="m">Deleted ${esc(c.name)}.</div>`;
+      await loadConnections();
+    };
+  }
+}
+
+// ── operation details + try it ─────────────────────────────
+function example(schema, depth = 0) {
+  if (!schema || depth > 4) return null;
+  if (schema.default !== undefined) return schema.default;
+  if (schema.enum) return schema.enum[0];
+  const t = Array.isArray(schema.type) ? schema.type.find(x => x !== "null") : schema.type;
+  if (t === "object" || schema.properties) {
+    const out = {};
+    for (const k of schema.required || []) out[k] = example((schema.properties || {})[k], depth + 1);
+    return out;
+  }
+  return {integer: 0, number: 0, boolean: false, array: [], string: ""}[t] ?? "";
+}
+
+async function showOperation(slug, name) {
+  const op = (await api(`/api/connections/${encodeURIComponent(slug)}/operations/${encodeURIComponent(name)}`)).body;
+  const conn = connections.find(c => c.slug === slug) || {name: slug};
+  current = {slug, op};
+  const args = example(op.input_schema) || {};
+  const admin = isApprover();
+  $("detail").innerHTML = `
+    <div class="m"><a href="#" id="o-back">${esc(conn.name)}</a></div>
+    <div class="row"><span class="method">${esc(op.method)}</span><h2 style="margin:0">${esc(op.title || op.name)}</h2>
+      <span class="b ${op.read_only ? "read" : "write"}">${op.read_only ? "read" : "write"}</span>
+      ${op.pinned ? '<span class="b">★ pinned</span>' : ""}${op.enabled ? "" : '<span class="b off">disabled</span>'}</div>
+    <div class="m"><code>${esc(op.name)}</code>${op.target ? " · " + esc(op.target) : ""}</div>
+    ${op.description ? `<p style="white-space:pre-wrap">${esc(op.description)}</p>` : ""}
+    <h3>Arguments</h3>
+    <textarea id="o-args" rows="8" spellcheck="false">${esc(JSON.stringify(args, null, 2))}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" id="o-run">${op.read_only ? "Run" : "Run (write)"}</button>
+      <button id="o-copy-mcp" title="Arguments for the call_operation tool on this connection's MCP server">Copy MCP call</button>
+      <button id="o-copy-curl">Copy API call</button>
+      ${admin ? `<button id="o-pin">${op.pinned ? "Unpin" : "Pin as tool"}</button>
+        <button id="o-ro">${op.read_only ? "Mark as write" : "Mark read-only"}</button>
+        <button id="o-en">${op.enabled ? "Disable" : "Enable"}</button>` : ""}
+    </div>
+    <div id="o-out"></div>
+    <div id="o-local"></div>
+    <details style="margin-top:10px"><summary class="m">Input schema</summary><pre>${esc(JSON.stringify(op.input_schema, null, 2))}</pre></details>`;
+  renderLocal(slug, op);
+  $("o-back").onclick = (e) => { e.preventDefault(); showConnection(slug); };
+  $("o-run").onclick = () => runOperation(slug, op);
+  $("o-copy-mcp").onclick = () => copy(JSON.stringify({name: "call_operation", arguments: {operation: op.name, args: readArgs()}}, null, 2), "MCP call copied");
+  $("o-copy-curl").onclick = () => copy(`curl -X POST ${location.origin}/api/connections/${slug}/operations/${op.name}/call \\\n  -H "X-API-Key: <your connection key>" -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({args: readArgs()}).replaceAll("'", "'\\''")}'`, "API call copied");
+  if (admin) {
+    const patch = async (body) => { await api(`/api/connections/${encodeURIComponent(slug)}/operations/${encodeURIComponent(op.name)}`, {method: "PATCH", body: JSON.stringify(body)}); showOperation(slug, op.name); };
+    $("o-pin").onclick = () => patch({pinned: !op.pinned});
+    $("o-ro").onclick = () => patch({read_only: !op.read_only});
+    $("o-en").onclick = () => patch({enabled: !op.enabled});
+  }
+}
+// ── local copy (scheduled syncs + stored records) ──────────
+const INTERVALS = [[15, "every 15 min"], [60, "hourly"], [360, "every 6 hours"], [1440, "daily"]];
+const enc = encodeURIComponent;
+const when = (t) => t ? new Date(t).toLocaleString() : "never";
+function intervalOpts(current) {
+  const list = INTERVALS.some(([m]) => m === current) ? INTERVALS : [...INTERVALS, [current, `every ${current} min`]];
+  return list.map(([m, label]) => `<option value="${m}" ${m === current ? "selected" : ""}>${esc(label)}</option>`).join("");
+}
+function syncLine(s) {
+  const cls = {ok: "ok", partial: "warn", error: "bad"}[s.status] || "m";
+  const note = s.last_summary && s.last_summary.note;
+  return `<span class="${cls}">${esc(s.status)}</span> · ${s.record_count} records · last synced ${esc(when(s.last_ok_at))}
+    · ${esc((INTERVALS.find(([m]) => m === s.interval_minutes) || [0, `every ${s.interval_minutes} min`])[1])}${s.enabled ? "" : " · paused"}
+    ${s.last_error ? `<div class="bad">${esc(s.last_error)}</div>` : ""}${note ? `<div class="m">${esc(note)}</div>` : ""}`;
+}
+async function syncsOf(slug) {
+  try { return (await api(`/api/connections/${enc(slug)}/syncs`)).body || []; } catch { return []; }
+}
+async function renderLocal(slug, op) {
+  const box = $("o-local");
+  if (!box || !op.read_only) return;
+  const s = (await syncsOf(slug)).find(x => x.operation === op.name);
+  const admin = isApprover();
+  if (!box.isConnected) return;  // the user moved on to something else
+  if (s) {
+    box.innerHTML = `<h3>Local copy</h3><div class="m">${syncLine(s)}</div>
+      <div class="m">Search it from the connection's details, or with search_records on its MCP server.</div>
+      ${admin ? `<div class="row" style="margin-top:6px">
+        <button class="small" id="l-run">Sync now</button>
+        <select id="l-int" aria-label="How often to sync">${intervalOpts(s.interval_minutes)}</select>
+        <button class="small" id="l-pause">${s.enabled ? "Pause" : "Resume"}</button>
+        <button class="small danger" id="l-del">Stop keeping</button></div><div id="l-msg" class="m"></div>` : ""}`;
+    if (!admin) return;
+    const base = `/api/connections/${enc(slug)}/syncs/${enc(s.id)}`;
+    const patch = async (body) => { await api(base, {method: "PATCH", body: JSON.stringify(body)}); renderLocal(slug, op); };
+    $("l-run").onclick = async () => {
+      $("l-run").disabled = true; $("l-msg").textContent = "Syncing…";
+      try { await api(base + "/run?wait=true", {method: "POST"}); } catch (e) { $("l-msg").textContent = e.message; }
+      renderLocal(slug, op);
+    };
+    $("l-int").onchange = (e) => patch({interval_minutes: +e.target.value});
+    $("l-pause").onclick = () => patch({enabled: !s.enabled});
+    $("l-del").onclick = async () => {
+      if (!confirm(`Stop keeping a local copy of ${op.name} and delete its ${s.record_count} stored records?`)) return;
+      await api(base, {method: "DELETE"}); renderLocal(slug, op);
+    };
+  } else if (admin) {
+    box.innerHTML = `<h3>Local copy</h3>
+      <div class="m">Keep what this returns in the local database, refreshed on a schedule, so it can be searched instantly
+        (here and by AI clients) without calling the API each time. Uses the arguments above; pages are followed automatically.</div>
+      <div class="row" style="margin-top:6px"><select id="l-int" aria-label="How often to sync">${intervalOpts(60)}</select>
+        <button class="small primary" id="l-keep">Keep a local copy</button></div>
+      <details style="margin-top:6px"><summary class="m">Advanced</summary>
+        <label for="l-path">Records path — where the list is in the response (blank = find it)</label>
+        <input id="l-path" style="width:100%" placeholder="e.g. data.items">
+        <label for="l-key">Key field — what identifies a record (blank = id / key / uuid)</label>
+        <input id="l-key" style="width:100%" placeholder="e.g. serialNumber"></details>
+      <div id="l-msg" class="m"></div>`;
+    $("l-keep").onclick = async () => {
+      $("l-keep").disabled = true; $("l-msg").textContent = "Saving and running the first sync…";
+      try {
+        const s = (await api(`/api/connections/${enc(slug)}/syncs?run=false`, {method: "POST", body: JSON.stringify({
+          operation: op.name, args: readArgs(), interval_minutes: +$("l-int").value,
+          records_path: $("l-path").value.trim(), key_field: $("l-key").value.trim()})})).body;
+        await api(`/api/connections/${enc(slug)}/syncs/${enc(s.id)}/run?wait=true`, {method: "POST"});
+      } catch (e) { $("l-msg").innerHTML = `<span class="bad">${esc(e.message)}</span>`; $("l-keep").disabled = false; return; }
+      renderLocal(slug, op);
+    };
+  } else {
+    box.innerHTML = "";
+  }
+}
+async function renderConnLocal(slug) {
+  const box = $("c-local");
+  if (!box) return;
+  const syncs = await syncsOf(slug);
+  if (!box.isConnected || !syncs.length) return;
+  box.innerHTML = `<h3>Local copy</h3>
+    ${syncs.map(s => `<div class="m" style="margin:4px 0"><a href="#" data-lop="${esc(s.operation)}">${esc(s.title || s.operation)}</a> — ${syncLine(s)}</div>`).join("")}
+    <div class="row" style="margin-top:8px">
+      <input id="r-q" class="grow" type="search" placeholder="Search stored records — name, number, email, hostname…" aria-label="Search stored records" autocomplete="off">
+      <input id="r-f" style="flex:1 1 150px" placeholder="field=value …" aria-label="Exact filters, e.g. status=open company.id=42" title="Exact filters, space separated: status=open company.id=42">
+    </div><div id="r-out"></div>`;
+  box.querySelectorAll("[data-lop]").forEach(a => a.onclick = (e) => { e.preventDefault(); showOperation(slug, a.dataset.lop); });
+  let t = null;
+  const go = () => { clearTimeout(t); t = setTimeout(() => searchStored(slug), 250); };
+  $("r-q").oninput = go; $("r-f").oninput = go;
+}
+async function searchStored(slug) {
+  const q = $("r-q").value.trim(), f = $("r-f").value.trim();
+  if (!q && !f) { $("r-out").innerHTML = ""; return; }
+  const p = new URLSearchParams({limit: "25"});
+  if (q) p.set("q", q);
+  for (const pair of f.split(/\s+/).filter(x => x.includes("="))) {
+    const i = pair.indexOf("=");
+    p.append("f." + pair.slice(0, i), pair.slice(i + 1));
+  }
+  try {
+    const r = (await api(`/api/connections/${enc(slug)}/records?${p}`)).body;
+    $("r-out").innerHTML = r.records.length ? r.records.map(x => `<details style="margin:4px 0"><summary><b>${esc(x.key)}</b>
+      <span class="m">· ${esc(x.operation)} · seen ${esc(when(x.last_seen))}${x.removed_at ? " · removed" : ""}</span></summary>
+      <pre>${esc(JSON.stringify(x.data, null, 2))}</pre></details>`).join("") : `<div class="m">No stored records match.</div>`;
+  } catch (e) { $("r-out").innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
+}
+
+function readArgs() { try { return JSON.parse($("o-args").value || "{}"); } catch { return {}; } }
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); flash(msg, "ok"); } catch { flash("Copy failed — select and copy manually", "bad"); }
+}
+function flash(msg, cls) { $("o-out").innerHTML = `<div class="${cls}" style="margin-top:8px">${esc(msg)}</div>`; }
+
+async function runOperation(slug, op) {
+  let args;
+  try { args = JSON.parse($("o-args").value || "{}"); } catch (e) { flash("Arguments are not valid JSON: " + e.message, "bad"); return; }
+  if (!op.read_only && !confirm("This operation changes data in " + slug + ". Run it?")) return;
+  $("o-run").disabled = true;
+  $("o-out").innerHTML = `<div class="m" style="margin-top:8px">Running…</div>`;
+  try {
+    const r = await api(`/api/connections/${encodeURIComponent(slug)}/operations/${encodeURIComponent(op.name)}/call`, {method: "POST", body: JSON.stringify({args})});
+    if (r.status === 202) {
+      const ch = r.body.change || {};
+      $("o-out").innerHTML = `<div class="warn" style="margin-top:8px">Needs approval — <a href="${esc(ch.url)}">change #${esc(ch.number)}</a>. Nothing has run yet.</div>`;
+    } else {
+      $("o-out").innerHTML = `<div class="ok" style="margin-top:8px">OK${r.body.truncated ? " (response truncated)" : ""}</div><pre>${esc(JSON.stringify(r.body.result, null, 2))}</pre>`;
+    }
+  } catch (e) {
+    $("o-out").innerHTML = `<div class="bad" style="margin-top:8px">${esc(e.message)}</div>`;
+  } finally { $("o-run").disabled = false; }
+}
+
+// ── add connection ─────────────────────────────────────────
+function onKind() {
+  const k = $("a-kind").value;
+  $("a-kind-help").textContent = KIND_HELP[k] || "";
+  const db = k === "sql" || k === "mongodb";
+  $("a-base-label").textContent = db ? "Base URL (not used for databases)" : (k === "mcp" || k === "graphql") ? "Endpoint URL" : "Base URL";
+  renderAuthFields();
+  $("a-save").disabled = true;
+}
+function onAuth() { renderAuthFields(); $("a-save").disabled = true; }
+function renderAuthFields() {
+  const k = $("a-kind").value, t = $("a-auth").value, spec = kinds.auth_types ? kinds.auth_types[t] : null;
+  const db = k === "sql" || k === "mongodb";
+  $("a-auth").disabled = db;
+  let html = "";
+  if (db) {
+    html += field("dsn", k === "sql" ? "Connection string (postgresql://user:pass@host/db, sqlite:///path …)" : "Connection string (mongodb://user:pass@host:27017/db)", true);
+  } else if (spec) {
+    for (const s of spec.secrets) html += field(s, s.replaceAll("_", " "), s !== "headers", s === "headers" ? '{"X-Header": "value"}' : "");
+    for (const s of spec.settings) html += field(s, s.replaceAll("_", " "), false,
+      {api_key_name: "X-API-Key", api_key_in: "header or query", client_auth: "basic or body"}[s] || "");
+  }
+  $("a-auth-fields").innerHTML = html;
+}
+function field(name, label, secret, placeholder = "") {
+  return `<label for="af-${esc(name)}">${esc(label)}</label><input id="af-${esc(name)}" data-auth="${esc(name)}" style="width:100%"
+    ${secret ? 'type="password" autocomplete="new-password"' : ""} placeholder="${esc(placeholder)}">`;
+}
+function collect() {
+  const k = $("a-kind").value;
+  const auth = {type: (k === "sql" || k === "mongodb") ? "none" : $("a-auth").value};
+  document.querySelectorAll("[data-auth]").forEach(i => {
+    if (!i.value) return;
+    auth[i.dataset.auth] = i.dataset.auth === "headers" ? (() => { try { return JSON.parse(i.value); } catch { return {}; } })() : i.value;
+  });
+  const source = {};
+  if (srcMode === "url" && $("a-url").value.trim()) source.url = $("a-url").value.trim();
+  if ((srcMode === "text" || srcMode === "file") && $("a-text").value.trim()) source.text = $("a-text").value;
+  return {kind: k, name: $("a-name").value.trim(), base_url: $("a-base").value.trim(), source, auth};
+}
+async function preview(save) {
+  const body = collect();
+  $("a-status").textContent = save ? "Saving…" : "Reading the definition…";
+  $("a-preview").disabled = $("a-save").disabled = true;
+  try {
+    const r = (await api("/api/connections" + (save ? "" : "?dry_run=true"), {method: "POST", body: JSON.stringify(body)})).body;
+    $("a-status").textContent = "";
+    const hint = r.auth_hint ? `<div class="m">The definition asks for <b>${esc(r.auth_hint.auth_type)}</b> auth${(r.auth_hint.credentials_found || []).length ? " (credentials found in it will be stored encrypted)" : ""}.</div>` : "";
+    $("a-preview-out").innerHTML = `<div class="card" style="margin-top:12px">
+      <div class="${save ? "ok" : ""}"><b>${save ? "Saved" : "Preview"}: ${esc(r.name)}</b> (${esc(r.slug)}) — ${r.operations} operations:
+        ${r.read_operations} read, ${r.write_operations} write</div>
+      <div class="m">Base URL: ${esc(r.base_url || "none")} · auth: ${esc(r.auth_type)}</div>${hint}
+      ${(r.warnings || []).map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}
+      ${save ? "" : `<div class="m" style="margin-top:6px">First operations:</div><pre>${esc((r.sample || []).map(o => `${o.method.padEnd(7)} ${o.name}${o.read_only ? "" : "   (write)"}`).join("\n"))}</pre>`}</div>`;
+    if (!save) { $("a-save").disabled = false; if (!$("a-name").value) $("a-name").value = r.name; }
+    else {
+      // Clear the form — never leave a connection string or key sitting in the page after saving.
+      ["a-name", "a-base", "a-url", "a-text"].forEach(id => { $(id).value = ""; });
+      $("a-file").value = "";
+      renderAuthFields();
+      await loadConnections(); showConnection(r.slug);
+    }
+  } catch (e) {
+    $("a-status").innerHTML = `<span class="bad">${esc(e.message)}</span>`;
+  } finally { $("a-preview").disabled = false; }
+}
+
+document.querySelectorAll("[data-src]").forEach(b => b.onclick = () => {
+  srcMode = b.dataset.src;
+  document.querySelectorAll("[data-src]").forEach(x => x.classList.toggle("on", x === b));
+  $("a-url").classList.toggle("hidden", srcMode !== "url");
+  $("a-text").classList.toggle("hidden", srcMode === "url");
+  $("a-file").classList.toggle("hidden", srcMode !== "file");
+  $("a-save").disabled = true;
+});
+$("a-file").onchange = async () => { const f = $("a-file").files[0]; if (f) { $("a-text").value = await f.text(); $("a-save").disabled = true; } };
+$("a-kind").onchange = onKind;
+$("a-auth").onchange = onAuth;
+$("a-preview").onclick = () => preview(false);
+$("a-save").onclick = () => preview(true);
+["a-name", "a-base", "a-url", "a-text"].forEach(id => $(id).addEventListener("input", () => { $("a-save").disabled = true; }));
+$("q").addEventListener("input", scheduleSearch);
+["f-conn", "f-access", "f-pinned"].forEach(id => $(id).addEventListener("change", runSearch));
+init().catch(e => { $("results").innerHTML = `<div class="bad">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

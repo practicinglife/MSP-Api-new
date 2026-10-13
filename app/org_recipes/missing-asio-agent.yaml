@@ -1,0 +1,13 @@
+name: missing-asio-agent
+title: Antivirus but no Asio agent
+description: >-
+  Machines that have SentinelOne or ESET installed but no Asio (RMM) agent — device name and company. Use for
+  "machines not in Asio", "missing RMM agent", "devices with antivirus but not in Asio".
+params: {}
+steps:
+  - tool: missing_asio_agent
+    args: {}
+    as: missing
+present: |
+  Say how many, then a table grouped by company: device, antivirus, last seen. Mention the CSV at
+  /api/av/missing-asio?format=csv and that the Asio agent is installed from the Remediation tab or ScreenConnect.

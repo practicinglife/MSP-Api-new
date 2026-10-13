@@ -1,0 +1,37 @@
+server {
+    listen 80;
+
+    # CORS – allow any origin (AI agents, browsers, etc.)
+    add_header 'Access-Control-Allow-Origin'  '*'                                          always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS'    always;
+    add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, ngrok-skip-browser-warning' always;
+
+    location / {
+        # Preflight fast-path
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+
+        # Forward to the ngrok public URL.
+        # ${NGROK_HOST} is substituted from the NGROK_HOST env var at container start.
+        proxy_pass            ${NGROK_HOST};
+        proxy_ssl_server_name on;
+
+        # Tell ngrok not to show the browser-warning interstitial
+        proxy_set_header  ngrok-skip-browser-warning  "true";
+
+        # Standard proxy headers
+        proxy_set_header  Host               $proxy_host;
+        proxy_set_header  X-Real-IP          $remote_addr;
+        proxy_set_header  X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header  X-Forwarded-Proto  $scheme;
+
+        # WebSocket / SSE support
+        proxy_http_version  1.1;
+        proxy_set_header    Upgrade     $http_upgrade;
+        proxy_set_header    Connection  "upgrade";
+
+        proxy_read_timeout    300s;
+        proxy_connect_timeout  75s;
+    }
+}

@@ -1,0 +1,4800 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "EMA2 API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/BillingReport/MyCompany": {
+      "post": {
+        "tags": [
+          "BillingReport"
+        ],
+        "summary": "",
+        "description": "Gets billing report for all managed companies (first level only). In case second level company report is needed (eg. ManagedMSP company report), please use SingleManagedCompany function. Year and month values for report are mandatory input fields. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/billing_mycompany.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestBase"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestBase"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestBase"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestBase"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/BillingReport/MyCompanySelectedCompaniesOnly": {
+      "post": {
+        "tags": [
+          "BillingReport"
+        ],
+        "summary": "",
+        "description": "Gets billing report for all managed companies (first level only). In case second level company report is needed (eg. ManagedMSP company report), please use SingleManagedCompany function. CompanyIds, year and month values are mandatory input fields. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/billing_selectedcompanies.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompanies"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompanies"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompanies"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompanies"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/BillingReport/SingleManagedCompany": {
+      "post": {
+        "tags": [
+          "BillingReport"
+        ],
+        "summary": "",
+        "description": "Gets billing report for specific single managed company. CompanyId, year and month values are mandatory input fields. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/billing_singlemanaged.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompany"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompany"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompany"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestCompany"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/BillingReport/DivisionsUnderSelectedDistributor": {
+      "post": {
+        "tags": [
+          "BillingReport"
+        ],
+        "summary": "",
+        "description": "Gets billing report for specific divisions (for Distributors only). DivisionIds, year and month are mandatory input fields. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/billing_divisions.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestDivision"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestDivision"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestDivision"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReportRequestDivision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Detail": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Returns detailed data for specific company. The return values contain all the details that are at disposal. CompanyId is a mandatory input field. To get CompanyId which current user belongs to, please call api/User/Current API function. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?detail.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDetailRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDetailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDetailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDetailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Children": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Returns list of first level children for specific company. The return values contain only main data fields. CompanyId is a mandatory input field. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?children.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyChildrenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyChildrenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyChildrenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyChildrenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Descendants": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Returns list of all children for specific company with specified type. The return values contain only main data fields - Name, CompanyId, CompanyTypeId, Email and Status. CompanyId and type of the desired children type are mandatory input fields. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?descendants.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDescendantsRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDescendantsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDescendantsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDescendantsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Users": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Returns all users that belong to current company. Paging data are mandatory input fields, CompanyId parameter is not needed as this is current user company. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_users.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUserRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUserRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUserRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Create/msp": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Creates MSP or MSP manager company. Name and email are mandatory fields and could not be duplicated within EMA2 application. Manager property should be set up to true in case MSP Manager is about to be created. For classic MSP company please set up manager property to false. Product code is mandatory as well. CountryCode from Address is required. Tags property is optional, it doesn't need to be specified. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_create_msp.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspCreateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Create/managedmsp": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Creates managed MSP company. Name and email are mandatory fields and could not be duplicated within EMA2 application. Product code is mandatory as well. Address and Tags properties are optional, they don't need to be specified. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_create_managedmsp.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspCreateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Create/customer": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Creates a customer - the last type in the hierarchy. Name is mandatory field and must not be duplicated within sibling companies. Address and Tags properties are optional, they don't need to be specified. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_create_customer.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Update/msp": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Updates MSP or MSP manager company. CompanyId is very important property as this specifies the company which is being updated. It is the only mandatory field. In case no update is needed for specific field it can be omitted. Providing empty string value will set up new value to void. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_update_msp.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspUpdateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MspUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Update/managedmsp": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Updates Managed MSP company. CompanyId is very important property as this specifies the company which is being updated. It is the only mandatory field. In case no update is needed for specific field it can be omitted. Providing empty string value will set up new value to void. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_update_managed.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspUpdateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedMspUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Update/customer": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Updates Customer company. CompanyId is very important property as this specifies the company which is being updated. It is the only mandatory field. In case no update is needed for specific field it can be omitted. Providing empty string value will set up new value to void. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_update_customer.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerUpdateRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Delete": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Deletes company. Company's state must be 'Suspended' otherwise the operation is not executed and failed response is returned. CompanyId is mandatory field. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_delete.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDeleteRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDeleteRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDeleteRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Suspend": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Suspends company. Company's state must be 'Active' otherwise the operation is not executed and failed response is returned. CompanyId is mandatory field. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_suspend.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanySuspendRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanySuspendRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanySuspendRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanySuspendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Company/Unsuspend": {
+      "post": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "",
+        "description": "Unsuspends company. Company's state must be 'Suspended' otherwise the operation is not executed and failed response is returned. CompanyId is mandatory field. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/company_unsuspend.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUnsuspendRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUnsuspendRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUnsuspendRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyUnsuspendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Ema1Mapping/CompanyId/{companyId}": {
+      "get": {
+        "tags": [
+          "Ema1Mapping"
+        ],
+        "summary": "",
+        "description": "Gets EMA2 (current) PublicID of Company equivalent to original EMA1 ID. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?ema1_companyid.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Ema1Mapping/SiteId": {
+      "get": {
+        "tags": [
+          "Ema1Mapping"
+        ],
+        "summary": "",
+        "description": "Gets EMA2 (current) PublicID of Site equivalent to original EMA1 ID or Legacy key (known also as ERA key). <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?ema1_siteid.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "legacyKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Ema1Mapping/LicenseId/{licenseId}": {
+      "get": {
+        "tags": [
+          "Ema1Mapping"
+        ],
+        "summary": "",
+        "description": "Gets EMA2 (current) PublicID of License equivalent to original EMA1 ID. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?ema1_licenseid.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "licenseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Ema1Mapping/UserId/{userId}": {
+      "get": {
+        "tags": [
+          "Ema1Mapping"
+        ],
+        "summary": "",
+        "description": "Gets EMA2 (current) PublicID of User equivalent to original EMA1 ID. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?ema1_userid.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/EntityTypes": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all entity types that are provided. The return values contain type codes as well as names. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?entitytypes.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/AvailableProducts": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all the available products that are provided. The return values contain product codes as well as product names on it. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?availableproducts.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/PermissionTypes": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all permission types that are available. The return values contain permission name with corresponding integer value. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?enum_permissions.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/CloudPermissionTypes": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all cloud permission types that are available. The return values contain cloud permission name with corresponding integer value. There is no input parameter needed. User has to be logged in. BEWARE types will change with transition to Eset PROTECT Hub. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?enum_permissions.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/CloudServiceTypes": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all cloud services that are available. The return values contain cloud service name with corresponding integer value. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?enum_permissions.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/LicenseStates": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all possible license states. The return values contain license state name with corresponding integer value. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?enum_licensestates.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Enum/OperationStates": {
+      "get": {
+        "tags": [
+          "Enum"
+        ],
+        "summary": "",
+        "description": "Returns list of all possible operation states. The return values contain operation state name with corresponding integer value. There is no input parameter needed. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?enum_operation_states.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/Order": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Orders new license for specified Customer. Input parameter is CustomerId together with product code and license type. Trial (licenseType = 4) or Full (licenseType = 1) licenses can be ordered at this point. User has to have write access to customer as well as has to be logged in. Please note that ordering multiple licenses with the same product is not possible, however there is an option to change product quantity (at any time). If license is successfully ordered HTTP response 200 code is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_order.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/UpdateQuantity": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Updates quantity for specified license. Input parameter is public license key together with quantity value. Quantity can be either increased or decreased. User has to have write access to customer as well as has to be logged in. If license is successfully updated  HTTP response 200 is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_update.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuantityLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuantityLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuantityLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuantityLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/ChangeProduct": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Upgrade or downgrade product for specified license. Input parameter is public license key together with new product number and quantity values. Quantity can be either increased or decreased. User has to have write access to customer as well as has to be logged in. If license is successfully updated  HTTP response 200 is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_change-product.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/ExtendTrial": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Extends trial license for another 30 days. Input parameter is public license key. Every trial license can be extended two times. User has to have write access to customer as well as has to be logged in. If license is successfully extended  HTTP response 200 is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_extend.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendTrialLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendTrialLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendTrialLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendTrialLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/Suspend": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Suspend license. Input parameter is public license key. User needs the Write permission to the customer. User can suspend a license only for the direct child company. User has to be logged in. If license is successfully suspended HTTP response 200 is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_suspend.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/Unsuspend": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Unsuspend license. Input parameter is public license key. User needs the Write permission to the customer. User can unsuspend a license only for the direct child company. User has to be logged in. If license is successfully unsuspended it returns either HTTP response 200. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_unsuspend.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsuspendLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/ConvertToFull": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Converts Trial license to Full license. User needs the Write permission to the customer. User can convert a trial license only for the direct child company. User has to be logged in. If license is successfully converted it returns HTTP response 200. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_convert.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertToFullLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertToFullLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertToFullLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertToFullLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/GetHistory": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Returns list of license history for specific license. Input parameter is public license key. User has to be logged in and has to have read or write access to customer. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_gethistory.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseHistoryRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseHistoryRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseHistoryRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseHistoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/Detail": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Returns detailed data for specific license. The return values contain all the details that are at disposal (eg. customerId, publicLicenseKey, productCode, operation etc.) <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_detail.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseDetailRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseDetailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseDetailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseDetailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/GetPossibleProductChanges": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Returns a list of licenses that are upgradable, downgradable or both. The return values are grouped by the customers and then the licenses. The request's EntityPublicId can be either a company's public ID or a customer's public ID. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_get_possible.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPossibleProductChangesRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPossibleProductChangesRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPossibleProductChangesRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPossibleProductChangesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/License/Remove": {
+      "post": {
+        "tags": [
+          "License"
+        ],
+        "summary": "",
+        "description": "Remove trial license. Input parameter is public license key. User needs the Write permissions to the customer. User can remove a trial license only from a direct child company. User has to be logged in. License has to be trial. If license is successfully removed HTTP response 200 is returned. Otherwise an error code is returned. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/license_remove.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveLicenseRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveLicenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveLicenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveLicenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Operation/State": {
+      "get": {
+        "tags": [
+          "Operation"
+        ],
+        "summary": "",
+        "description": "Returns the operation state for the operation specified by the operation ID in the call. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/operation.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Search/Licenses": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "",
+        "description": "Returns list of licenses based on specific search parameter. Keyword in search parameter is searching in product code, product name and publicLicenseKey field. CustomerId is optional and if it contains valid GUID value then the result is searching licenses within this customer. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/search_licenses.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseSearchRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseSearchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseSearchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Search/Users": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "",
+        "description": "Returns list of users based on specific search parameters. It is possible to search in users using one keyword with one or more columns { \"search\": {\"keyword\": [Column_number_X, Column_number_Y]}, \"skip\": 0, \"take\": 50 } or using more keywords with different columns { \"search\": {\"keyword\": [Column_number_X, Column_number_Y], \"keyword2\": [Column_number_Z]}, \"skip\": 0, \"take\": 50 }. Columns are represented as a number. For string columns it is possible to search providing only a part of the keyword. User has to be logged in. For more information including full table of contents please use following link. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/search_users.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Search/Companies": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "",
+        "description": "Returns list of companies based on specific search parameters. It is possible to search in companies using one keyword with one or more columns { \"search\": {\"keyword\": [Column_number_X, Column_number_Y]}, \"skip\": 0, \"take\": 50 } or using more keywords with different columns { \"search\": {\"keyword\": [Column_number_X, Column_number_Y], \"keyword2\": [Column_number_Z]}, \"skip\": 0, \"take\": 50 }. Columns are represented as a number. For string columns it is possible to search providing only a part of the keyword. User has to be logged in. For more information including full table of contents please use following link. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/search_companies.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneralSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/TermsOfUse/Get": {
+      "get": {
+        "tags": [
+          "TermsOfUse"
+        ],
+        "summary": "",
+        "description": "Returns list of all available Terms of Uses. The return values contain all the details that are at disposal. Important value is product code which determines to which products is Terms of Use applied. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/termsofuse_get.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/TermsOfUse/Detail": {
+      "get": {
+        "tags": [
+          "TermsOfUse"
+        ],
+        "summary": "",
+        "description": "Returns detailed data for specific Terms of Use. The return values contain all the details that are at disposal. TermsOfUseId is a mandatory input field. To get TermsOfUseId, please call /api/termsofuse/get API function. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/termsofuse_detail.html\">Read more</a>",
+        "parameters": [
+          {
+            "name": "termsOfUseId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/TermsOfUse/Accept": {
+      "post": {
+        "tags": [
+          "TermsOfUse"
+        ],
+        "summary": "",
+        "description": "Accepts the Terms of Use that is required to order or activation some licenses. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/termsofuse_accept.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsOfUseAcceptRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsOfUseAcceptRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsOfUseAcceptRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsOfUseAcceptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Token/Get": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "summary": "",
+        "description": "Returns access token plus refresh token for specific user. User name and password are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?get.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/Token/Renew": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "summary": "",
+        "description": "Renews the current access token. Refresh token is a mandatory input field. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?renew.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewTokenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewTokenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewTokenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/Token/Check": {
+      "post": {
+        "tags": [
+          "Token"
+        ],
+        "summary": "",
+        "description": "Checks the current access token whether it's still active. Access token is a mandatory input field. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?check.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckTokenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckTokenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckTokenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/UsageReport/AllCompanies/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns product usage report (including seat days) for all companies that belong to current user company - per specific period of time. Report consists of company list as well as product list. Total count of companies is being returned as well. Date from / to and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?allcompanies_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/SelectedCompanies/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns product usage report (including seat days) for specified companies that belong to current user company - per specific period of time. Report consists of company list as well as product list. Total count of companies is being returned as well. Date from / to, list of specific company IDs and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?selected_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/Detailed/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns detailed product usage report for all companies that belong to current user company - per specific period of time. Report consists of company list as well as product list. Total count of companies is being returned as well. Date from / to and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?allcompanies_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsAllCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/DetailedSelectedCompanies/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns detailed product usage report for selected companies - per specific period of time. Report consists of company list as well as product list. Total count of companies is being returned as well. Date from / to and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?allcompanies_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSelectedCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/AllCompanies/categories": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns category usage report (including seat days) for all companies that belong to current user company - per specific period of time. Report consists of company list as well as category list. Total count of companies is being returned as well. Date from / to and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?allcompanies_categories.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesAllCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesAllCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesAllCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/SelectedCompanies/categories": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns category usage report (including seat days) for specified companies - per specific period of time. Report consists of company list as well as category list that belongs to current company. Total count of companies is being returned as well. Date from / to, list of specific company IDs and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?selected_categories.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesSelectedCompaniesUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesSelectedCompaniesUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/Monthly/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns monthly product usage report (including seat days) for both - specified company and products. Report consists of product list that belongs to current company. Date from / to, companyID and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?monthly_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsMonthlyUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsMonthlyUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsMonthlyUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsMonthlyUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/Monthly/categories": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns monthly category usage report (including seat days) for both - specified company and categories. Report consists of product list that belongs to current company. Date from / to, companyID and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?monthly_categories.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesMonthlyUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesMonthlyUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesMonthlyUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesMonthlyUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/Daily/products": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns daily product usage report (including seat days) for both - specified company and products. Report consists of product list that belongs to current company. Date from / to, specific companyID and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?daily_products.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsDailyUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsDailyUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsDailyUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsDailyUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/UsageReport/Daily/categories": {
+      "post": {
+        "tags": [
+          "UsageReport"
+        ],
+        "summary": "",
+        "description": "Returns daily category usage report (including seat days) for both - specified company and categories. Report consists of product list that belongs to specified company. Date from / to, company ID and paging information are mandatory input fields. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?daily_categories.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesDailyUsageReportRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesDailyUsageReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesDailyUsageReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriesDailyUsageReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/Current": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Returns detailed data about user that is currently logged in. This includes firstname, lastname, email and details regarding company that the user belongs to (Including companyId). No input parameters are needed. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/?current.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/ChangePassword": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Changes password of a user that is currently logged in. Input parameter is new password as string with minimum of 10 characters. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/users_changepass.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/GetUserDetails": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Retrieves the details of specified user. Input parameter is userID. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/user_getdetails.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUserDetailRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUserDetailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUserDetailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUserDetailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/Create": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Returns detailed data about user that is currently created. This includes firstname, lastname, email, details regarding company that the user belongs to (including companyId) and detail country and timeZone. Permissions to parent company can be created as well - with PermissionType set to: (\"permissionType\": 1 - Write to parent, 2 - Read to parent, 3 - No access to parent). \r\n            Set specific permissions is optional, it can be set only in case PermissionType = 2 or 3 (e.g. Parent permission has to be either read or no-access. SpecificPermissions consists of companyId's guid  and permissions type (1 - Write to company, 2 - Read to company). \r\n            You can set more Specific permissions when creating a user.\r\n            Setting of cloud service permissions is optional, it can be set only in case a valid Cloud-eligible license is ordered under at least one accessible customer. Available value for Protect (1) are (1 - write, 2 - read, 3 - no access, 4 - custom access) and Cloud office security (1 - write, 2 - read, 3 - no access). If cloud service permissions are not set, they are by default considered as no access.\r\n            User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/user_create.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/Update": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Updates user data and returns all the data including updated properties. Data which could be updated are firstname, lastname, description, phone, country and permissions. UserId is a mandatory input field. Permissions to parent company can be updated as well - with PermissionType set to: (\"permissionType\": 1 - Write to parent, 2 - Read to parent, 3 - No access to parent). \r\n            Set specific permissions is optional, it can be set only in case PermissionType = 2 or 3 (e.g. Parent permission has to be either read or no-access). SpecificPermissions consists of companyId's guid and permissions type (1 - Write to company, 2 - Read to company). It is possible to set more specific permissions while updating user. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/user_update.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/User/GetDirectAccessibleChildren": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "",
+        "description": "Returns list of first level accessible children (user has to have write access to children) for company that current user belongs to. The return values contain only main data fields - Name, CompanyId, CompanyTypeId, Email and Status. User has to be logged in. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/user_getchildren.html\">Read more</a>",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectAccesableChildrenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectAccesableChildrenRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectAccesableChildrenRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectAccesableChildrenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/Version": {
+      "get": {
+        "tags": [
+          "Version"
+        ],
+        "description": "Gets API version which is currently deployed. <a target=\"_blank\" href=\"https://help.eset.com/ema/2/api/en-US/version_version.html\">Read more</a>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BillingReportRequestBase": {
+        "required": [
+          "month",
+          "year"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "pattern": "^[12]\\d{3}$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BillingReportRequestCompanies": {
+        "required": [
+          "companyIds",
+          "month",
+          "year"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "pattern": "^[12]\\d{3}$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "companyIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BillingReportRequestCompany": {
+        "required": [
+          "companyId",
+          "month",
+          "year"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "pattern": "^[12]\\d{3}$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BillingReportRequestDivision": {
+        "required": [
+          "divisionIds",
+          "month",
+          "year"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "pattern": "^[12]\\d{3}$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "divisionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoriesAllCompaniesUsageReportRequest": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoriesDailyUsageReportRequest": {
+        "required": [
+          "companyId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "usageClients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageClient"
+            },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoriesMonthlyUsageReportRequest": {
+        "required": [
+          "companyId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoriesSelectedCompaniesUsageReportRequest": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "companyPublicIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChangePasswordRequest": {
+        "required": [
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChangeProductRequest": {
+        "required": [
+          "newProductCode",
+          "publicLicenseKey",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "newProductCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CheckTokenRequest": {
+        "required": [
+          "accessToken"
+        ],
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CloudPermissionType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "CompanyChildrenRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyCreateAddressRequest": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "streetAddress": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "zipCode": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyCreateMspAddressRequest": {
+        "required": [
+          "countryCode"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "streetAddress": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "zipCode": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "countryCode": {
+            "maxLength": 3,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyDeleteRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyDescendantsRequest": {
+        "required": [
+          "companyId",
+          "entityType"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "entityType": {
+            "$ref": "#/components/schemas/EntityType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyDetailRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanySuspendRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyUnsuspendRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyUpdateAddressRequest": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "streetAddress": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "zipCode": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompanyUserRequest": {
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConvertToFullLicenseRequest": {
+        "required": [
+          "publicLicenseKey",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateUserRequest": {
+        "required": [
+          "countryCode",
+          "email",
+          "firstName",
+          "lastName",
+          "permissionType"
+        ],
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string"
+          },
+          "lastName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 300,
+            "minLength": 0,
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "countryCode": {
+            "minLength": 1,
+            "pattern": "^[a-zA-Z]{3}$",
+            "type": "string"
+          },
+          "permissionType": {
+            "$ref": "#/components/schemas/PermissionType"
+          },
+          "specificPermissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "nullable": true
+          },
+          "cloudConsolePermissions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CloudPermissionType"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerCreateRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "divisionPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "languageId": {
+            "type": "integer",
+            "format": "int64",
+            "readOnly": true
+          },
+          "ecaAllowed": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "parentCompanyId": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyCreateAddressRequest"
+          },
+          "email": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "discount": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "remoteAdministration": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "parentCompanyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerUpdateRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyUpdateAddressRequest"
+          },
+          "tagsToAdd": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "tagsToRemove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DirectAccesableChildrenRequest": {
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EntityType": {
+        "enum": [
+          1000,
+          1001,
+          1002,
+          1003,
+          1004,
+          1005,
+          1006,
+          1007
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "ExtendTrialLicenseRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GeneralSearchRequest": {
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "search": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "nullable": true
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetPossibleProductChangesRequest": {
+        "required": [
+          "entityId"
+        ],
+        "type": "object",
+        "properties": {
+          "entityId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetUserDetailRequest": {
+        "required": [
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "userPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LicenseDetailRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LicenseHistoryRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LicenseSearchRequest": {
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "keyword": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagedMspCreateRequest": {
+        "required": [
+          "email",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "divisionPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "languageId": {
+            "type": "integer",
+            "format": "int64",
+            "readOnly": true
+          },
+          "ecaAllowed": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 300,
+            "minLength": 0,
+            "type": "string"
+          },
+          "trialLicenseAllowed": {
+            "type": "boolean"
+          },
+          "payPerOrder": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "payPerUse": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyCreateAddressRequest"
+          },
+          "trusted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagedMspUpdateRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyUpdateAddressRequest"
+          },
+          "tagsToAdd": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "tagsToRemove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 300,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "trialLicenseAllowed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "productsToAdd": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "productsToRemove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "trusted": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "acceptPendingRequests": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MspCreateRequest": {
+        "required": [
+          "address",
+          "email",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "languageId": {
+            "type": "integer",
+            "format": "int64",
+            "readOnly": true
+          },
+          "ecaAllowed": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 300,
+            "minLength": 0,
+            "type": "string"
+          },
+          "trialLicenseAllowed": {
+            "type": "boolean"
+          },
+          "payPerOrder": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "payPerUse": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyCreateMspAddressRequest"
+          },
+          "manager": {
+            "type": "boolean"
+          },
+          "reseller": {
+            "type": "boolean"
+          },
+          "divisionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "divisionPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MspUpdateRequest": {
+        "required": [
+          "companyId"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "publicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "entityPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyUpdateAddressRequest"
+          },
+          "tagsToAdd": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "tagsToRemove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagRequest"
+            },
+            "nullable": true
+          },
+          "customIdentifier": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "comment": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "vatId": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 300,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "trialLicenseAllowed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "productsToAdd": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "productsToRemove": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductRequest"
+            },
+            "nullable": true
+          },
+          "manager": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "reseller": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "divisionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "divisionPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderLicenseRequest": {
+        "required": [
+          "customerId",
+          "licenseType",
+          "productCode",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "customerId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "licenseType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customerPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PermissionType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          1000,
+          -2,
+          -1
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "ProductRequest": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductsAllCompaniesUsageReportRequest": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductsDailyUsageReportRequest": {
+        "required": [
+          "companyId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "usageClients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageClient"
+            },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductsMonthlyUsageReportRequest": {
+        "required": [
+          "companyId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "companyPublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductsSelectedCompaniesUsageReportRequest": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "companyIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "companyPublicIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RemoveLicenseRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RenewTokenRequest": {
+        "required": [
+          "refreshToken"
+        ],
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SuspendLicenseRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TagRequest": {
+        "required": [
+          "tag"
+        ],
+        "type": "object",
+        "properties": {
+          "tag": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TermsOfUseAcceptRequest": {
+        "required": [
+          "termsOfUseId"
+        ],
+        "type": "object",
+        "properties": {
+          "termsOfUseId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "termsOfUsePublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TokenRequest": {
+        "required": [
+          "password",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UnsuspendLicenseRequest": {
+        "required": [
+          "publicLicenseKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateQuantityLicenseRequest": {
+        "required": [
+          "publicLicenseKey",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "publicLicenseKey": {
+            "minLength": 1,
+            "pattern": "^([a-zA-Z0-9]{3}[-]{1}){2}[a-zA-Z0-9]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateUserRequest": {
+        "required": [
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "maxLength": 36,
+            "minLength": 0,
+            "type": "string"
+          },
+          "firstName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "countryCode": {
+            "pattern": "^[a-zA-Z]{3}$",
+            "type": "string",
+            "nullable": true
+          },
+          "permissionType": {
+            "$ref": "#/components/schemas/PermissionType"
+          },
+          "specificPermissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "nullable": true
+          },
+          "cloudConsolePermissions": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CloudPermissionType"
+            },
+            "nullable": true
+          },
+          "userToUpdatePublicId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UsageClient": {
+        "type": "object",
+        "properties": {
+          "aggregator": {
+            "type": "string",
+            "nullable": true
+          },
+          "aggregatorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "aggregatorType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "licenseType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "usage": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastDayUsage": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "description": "Please enter only JWT without Bearer name into field.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

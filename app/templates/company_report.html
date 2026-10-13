@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ company_name }} — Cross-Platform Device Report</title>
+  <style>
+    @page { size: Letter; margin: 0.6in 0.5in; }
+    body { font-family: "DejaVu Sans", sans-serif; color: #1a1a1a; font-size: 10pt; }
+    h1 { font-size: 18pt; margin: 0 0 4pt; color: #0f172a; }
+    h2 { font-size: 13pt; margin: 18pt 0 6pt; padding-bottom: 4pt;
+         border-bottom: 1px solid #cbd5e1; color: #0f172a; }
+    .meta { color: #64748b; font-size: 9pt; margin-bottom: 14pt; }
+    .summary { display: table; width: 100%; margin: 10pt 0 6pt; }
+    .summary-row { display: table-row; }
+    .summary-cell { display: table-cell; padding: 8pt 12pt; background: #f1f5f9;
+                    border-right: 4pt solid #fff; text-align: center; vertical-align: top; }
+    .summary-cell .label { font-size: 8pt; color: #64748b; text-transform: uppercase;
+                           letter-spacing: 0.5pt; margin-bottom: 4pt; }
+    .summary-cell .value { font-size: 18pt; font-weight: bold; color: #0f172a; }
+    .summary-cell.green .value { color: #15803d; }
+    .summary-cell.red .value { color: #b91c1c; }
+    .summary-cell.amber .value { color: #b45309; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 6pt; font-size: 9pt; }
+    th { text-align: left; padding: 6pt 8pt; background: #e2e8f0; color: #0f172a;
+         font-weight: 600; border-bottom: 1pt solid #94a3b8; font-size: 8.5pt;
+         text-transform: uppercase; letter-spacing: 0.3pt; }
+    td { padding: 5pt 8pt; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafbfc; }
+
+    .badge { display: inline-block; padding: 1pt 6pt; border-radius: 3pt;
+             font-size: 7.5pt; font-weight: 600; text-transform: uppercase;
+             letter-spacing: 0.3pt; }
+    .badge-full { background: #dcfce7; color: #166534; }
+    .badge-partial { background: #fef3c7; color: #92400e; }
+    .badge-unmatched { background: #fee2e2; color: #991b1b; }
+    .badge-platform { background: #dbeafe; color: #1e40af; margin-right: 3pt; }
+
+    .mismatch-row { background: #fef2f2 !important; }
+    .mismatch-row.amber { background: #fffbeb !important; }
+    .action { font-size: 8.5pt; color: #475569; font-style: italic; }
+    .action-destructive { color: #b91c1c; font-weight: 600; }
+
+    .footer { margin-top: 24pt; padding-top: 8pt; border-top: 1px solid #e5e7eb;
+              color: #94a3b8; font-size: 8pt; text-align: center; }
+    .empty { color: #94a3b8; font-style: italic; padding: 12pt; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>📊 {{ company_name|title }}</h1>
+  <div class="meta">
+    Cross-Platform Device Reconciliation Report &nbsp;•&nbsp; Generated {{ generated_at }}
+    {% if assigned_av %}&nbsp;•&nbsp; AV: <strong>{{ assigned_av }}</strong>{% endif %}
+    {% if psa_present %}&nbsp;•&nbsp; PSA Customer{% endif %}
+  </div>
+
+  <div class="summary">
+    <div class="summary-row">
+      <div class="summary-cell"><div class="label">Platforms</div>
+        <div class="value">{{ platforms_present|length }}</div></div>
+      <div class="summary-cell green"><div class="label">Matched</div>
+        <div class="value">{{ matched_count }}</div></div>
+      <div class="summary-cell {{ 'red' if mismatched_count else 'green' }}">
+        <div class="label">Mismatched</div>
+        <div class="value">{{ mismatched_count }}</div></div>
+      <div class="summary-cell"><div class="label">Total Unique</div>
+        <div class="value">{{ matched_count + mismatched_count }}</div></div>
+    </div>
+  </div>
+
+  <p style="font-size:8.5pt;color:#64748b;margin:6pt 0 0">
+    <strong>Platforms Present:</strong>
+    {% for p in platforms_present %}<span class="badge badge-platform">{{ p }}</span>{% endfor %}
+  </p>
+
+  {% if mismatched_count %}
+  <h2>⚠️ Mismatched Devices Requiring Action ({{ mismatched_count }})</h2>
+  <table>
+    <thead><tr>
+      <th>Hostname</th><th>Only On</th><th>Serial</th><th>Site</th><th>Suggested Action</th>
+    </tr></thead>
+    <tbody>
+    {% for dev in mismatched %}
+      <tr class="mismatch-row {{ '' if dev.suggested_action.destructive == 'true' else 'amber' }}">
+        <td><strong>{{ dev.hostname or '(no hostname)' }}</strong></td>
+        <td><span class="badge badge-unmatched">{{ dev.only_platform }}</span></td>
+        <td>{{ dev.serial_number or '—' }}</td>
+        <td>{{ dev.site_name or '—' }}</td>
+        <td class="action {{ 'action-destructive' if dev.suggested_action.destructive == 'true' else '' }}">
+          <strong>{{ dev.suggested_action.label }}</strong><br>
+          <span style="color:#64748b;font-style:normal;font-size:8pt">{{ dev.suggested_action.rationale }}</span>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <h2>✅ No Mismatched Devices</h2>
+  <div class="empty">All devices reconcile cleanly across all platforms.</div>
+  {% endif %}
+
+  <h2>Matched Devices ({{ matched_count }})</h2>
+  {% if matched %}
+  <table>
+    <thead><tr>
+      <th>Hostname</th><th>Status</th><th>Platforms</th><th>Serial</th><th>Site</th>
+    </tr></thead>
+    <tbody>
+    {% for dev in matched %}
+      <tr>
+        <td><strong>{{ dev.hostname }}</strong></td>
+        <td><span class="badge badge-{{ dev.match_type }}">{{ dev.match_type }}</span></td>
+        <td>{% for p in dev.platforms %}<span class="badge badge-platform">{{ p }}</span>{% endfor %}</td>
+        <td>{{ dev.serial_number or '—' }}</td>
+        <td>{{ dev.site_name or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No matched devices found.</div>
+  {% endif %}
+
+  <div class="footer">
+    MSP API Tools &nbsp;•&nbsp; {{ company_name|title }} &nbsp;•&nbsp; {{ generated_at }}
+  </div>
+</body>
+</html>

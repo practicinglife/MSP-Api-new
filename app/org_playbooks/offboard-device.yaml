@@ -1,0 +1,10 @@
+name: offboard-device
+title: "Offboard {{hostname}}"
+description: >
+  Retire one machine everywhere: SentinelOne decommission, Asio endpoint removal, PSA
+  configuration inactivated (kept for history). ScreenConnect removal is flagged for the console.
+params:
+  hostname: {type: string, description: Device hostname}
+steps:
+  - command: offboard_device
+    params: {hostname: "{{hostname}}"}

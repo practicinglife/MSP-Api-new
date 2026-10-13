@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "info": {"title": "Users (test)", "version": "2.0"},
+  "host": "users.example.com",
+  "basePath": "/v2",
+  "schemes": ["http", "https"],
+  "securityDefinitions": {"basicAuth": {"type": "basic"}},
+  "paths": {
+    "/users/{id}": {
+      "get": {
+        "summary": "Get a user",
+        "parameters": [{"name": "id", "in": "path", "required": true, "type": "string"}],
+        "responses": {"200": {"description": "ok", "schema": {"$ref": "#/definitions/User"}}}
+      },
+      "put": {
+        "operationId": "updateUser",
+        "consumes": ["application/json"],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "type": "string"},
+          {"name": "user", "in": "body", "required": true, "schema": {"$ref": "#/definitions/User"}}
+        ],
+        "responses": {"200": {"description": "ok"}}
+      }
+    },
+    "/upload": {
+      "post": {
+        "operationId": "uploadAvatar",
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          {"name": "file", "in": "formData", "type": "file", "required": true},
+          {"name": "caption", "in": "formData", "type": "string"}
+        ],
+        "responses": {"200": {"description": "ok"}}
+      }
+    }
+  },
+  "definitions": {
+    "User": {"type": "object", "properties": {"id": {"type": "string"}, "email": {"type": "string", "format": "email"}}}
+  }
+}

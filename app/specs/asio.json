@@ -1,0 +1,498 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ConnectWise Asio Platform Integration API",
+    "description": "Synthetic OpenAPI spec generated from ConnectWise Asio developer documentation (scraped pages, auth guide, pagination guide, and existing connector implementation). Covers the Current API — the Legacy API is being discontinued April 2026.",
+    "version": "2.3.5"
+  },
+  "servers": [
+    {
+      "url": "https://openapi.service.itsupport247.net",
+      "description": "Asio Production - NA"
+    },
+    {
+      "url": "https://openapi.service.euplatform.connectwise.com",
+      "description": "Asio Production - EU"
+    },
+    {
+      "url": "https://openapi.service.auplatform.connectwise.com",
+      "description": "Asio Production - AU"
+    }
+  ],
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "OAuth 2.0 access token obtained from /v1/token"
+      }
+    }
+  },
+  "paths": {
+    "/v1/token": {
+      "post": {
+        "summary": "Obtain OAuth 2.0 access token",
+        "description": "Authenticate with client_id and client_secret to receive a temporary access token. NOTE: Uses JSON body, NOT application/x-www-form-urlencoded. Tokens must be reused until expiry; requesting too often returns 423 Locked.",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["grant_type", "client_id", "client_secret"],
+                "properties": {
+                  "grant_type": { "type": "string", "example": "client_credentials" },
+                  "client_id": { "type": "string" },
+                  "client_secret": { "type": "string" },
+                  "scope": { "type": "string", "example": "platform.companies.read platform.devices.read" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access token response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": { "type": "string" },
+                    "token_type": { "type": "string" },
+                    "expires_in": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "423": { "description": "Token requested too often — reuse existing token until expiry" }
+        }
+      }
+    },
+    "/api/platform/v1/company/companies": {
+      "get": {
+        "summary": "List all companies",
+        "description": "Retrieve companies. Uses cursor-based pagination via Link header. Use 'limit' query parameter to control page size.",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100 }, "description": "Number of companies per page" },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "Cursor for next page (from Link header)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of companies",
+            "headers": {
+              "Link": { "schema": { "type": "string" }, "description": "RFC 5988 Link header with rel=next cursor" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "integer" },
+                      "name": { "type": "string" },
+                      "identifier": { "type": "string" },
+                      "status": { "type": "object" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/company/companies/{companyId}/sites": {
+      "get": {
+        "summary": "List sites for a company",
+        "description": "Retrieve all sites belonging to a specific company.",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "companyId", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "The company ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v2/device/categories/{category}/endpoints": {
+      "post": {
+        "summary": "List device endpoints by category",
+        "description": "Retrieve device endpoints for a given category. Uses POST with body containing resourceType and resources. Supports cursor-based pagination via Link header.",
+        "tags": ["Devices"],
+        "parameters": [
+          { "name": "category", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Device category (e.g., 'desktops_laptops', 'network_devices')" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resourceType": { "type": "string" },
+                  "resources": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of device endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v2/service/ticketing/tickets": {
+      "get": {
+        "summary": "List tickets",
+        "description": "Retrieve service tickets. Uses pageSize/pageNum query parameters for pagination.",
+        "tags": ["Tickets"],
+        "parameters": [
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 25 }, "description": "Number of tickets per page" },
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 }, "description": "Page number" }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tickets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/service/ticketing/tickets/{id}/notes": {
+      "post": {
+        "summary": "Add a note to a ticket",
+        "description": "Create a note on an existing ticket. Visibility: 1 or 2. ExtendedAttributes array is optional for custom data fields.",
+        "tags": ["Tickets"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "Ticket ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "detail": { "type": "string", "description": "Note text content" },
+                  "visibility": { "type": "integer", "enum": [1, 2], "description": "1 or 2" },
+                  "extendedAttributes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "name": { "type": "string" },
+                        "value": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Note created" }
+        }
+      }
+    },
+    "/api/platform/v1/asset/assets": {
+      "get": {
+        "summary": "List assets",
+        "description": "Retrieve asset data. Requires platform.asset.read scope.",
+        "tags": ["Assets"],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer" }, "description": "Number of assets per page" },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "Cursor for next page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/automation/tasks": {
+      "get": {
+        "summary": "List automation tasks",
+        "description": "Retrieves a list of automation tasks and scripts. Requires platform.automation.read scope.",
+        "tags": ["Automation"],
+        "responses": {
+          "200": {
+            "description": "List of automation tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a scheduled automation task",
+        "description": "Create a new scheduled automation task. Requires platform.automation.create scope.",
+        "tags": ["Automation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Automation task created" }
+        }
+      }
+    },
+    "/api/platform/v1/device/groups": {
+      "get": {
+        "summary": "List device groups",
+        "description": "View all device groups. Requires platform.deviceGroups.read scope.",
+        "tags": ["Devices"],
+        "responses": {
+          "200": {
+            "description": "List of device groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/custom-fields/definitions": {
+      "get": {
+        "summary": "List custom field definitions",
+        "description": "View custom fields definitions. Requires platform.custom_fields_definitions.read scope.",
+        "tags": ["Custom Fields"],
+        "responses": {
+          "200": {
+            "description": "List of custom field definitions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/custom-fields/values": {
+      "get": {
+        "summary": "List custom field values",
+        "description": "View custom fields values. Requires platform.custom_fields_values.read scope.",
+        "tags": ["Custom Fields"],
+        "responses": {
+          "200": {
+            "description": "List of custom field values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/security/v1/siem/threats": {
+      "get": {
+        "summary": "List security threats",
+        "description": "Read security threats data. Requires security.siem.read scope.",
+        "tags": ["Security"],
+        "responses": {
+          "200": {
+            "description": "List of security threats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/performance/data": {
+      "get": {
+        "summary": "Read performance data",
+        "description": "Read performance service data. Requires platform.performance.read scope.",
+        "tags": ["Performance"],
+        "responses": {
+          "200": {
+            "description": "Performance data",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/data-mapping": {
+      "get": {
+        "summary": "Read data mapping",
+        "description": "Read data mapping data. Requires platform.dataMapping.read scope.",
+        "tags": ["Data Mapping"],
+        "responses": {
+          "200": {
+            "description": "Data mapping information",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/v1/policies": {
+      "get": {
+        "summary": "List policies",
+        "description": "List all partner policies. Requires platform.policies.read scope.",
+        "tags": ["Policies"],
+        "responses": {
+          "200": {
+            "description": "List of policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a policy",
+        "description": "Create a new partner policy. Requires platform.policies.create scope.",
+        "tags": ["Policies"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Policy created" }
+        }
+      }
+    },
+    "/api/platform/v1/policies/{id}": {
+      "put": {
+        "summary": "Update a policy",
+        "description": "Update an existing partner policy. Requires platform.policies.update scope.",
+        "tags": ["Policies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Policy updated" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a policy",
+        "description": "Delete a partner policy. Requires platform.policies.delete scope.",
+        "tags": ["Policies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Policy deleted" }
+        }
+      }
+    },
+    "/api/platform/v1/patching/endpoint-patches": {
+      "get": {
+        "summary": "List endpoint patches",
+        "description": "List all OS patching endpoint patches. Requires platform.patching.read scope.",
+        "tags": ["Patching"],
+        "responses": {
+          "200": {
+            "description": "List of endpoint patches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

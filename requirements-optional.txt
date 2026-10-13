@@ -1,0 +1,9 @@
+# Optional database drivers for SQL / MongoDB connections. PostgreSQL (asyncpg) and SQLite (aiosqlite)
+# are built in; install only what your connections need:
+#   pip install -r requirements-optional.txt
+pymysql>=1.1          # MySQL / MariaDB        mysql+pymysql://user:pass@host/db
+pyodbc>=5.0           # SQL Server             mssql+pyodbc://user:pass@host/db?driver=ODBC+Driver+18+for+SQL+Server
+oracledb>=2.0         # Oracle                 oracle+oracledb://user:pass@host:1521/?service_name=XE
+sqlalchemy-hana>=2.0  # SAP HANA (needs hdbcli) hana://user:pass@host:30015
+hdbcli>=2.19
+pymongo>=4.6          # MongoDB                mongodb://user:pass@host:27017/db

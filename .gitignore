@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.env
+.venv
+venv/
+env/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+*.log
+
+# Runtime output and data exports — may contain customer data, never commit
+reports/
+all_companies/
+*.csv
+*.zip
+*.db
+*.sqlite
+_*.json
+*_reconciled.json
+
+# Local tooling / IDE state
+node_modules/
+.vs/
+
+# Vendor reference docs (copyrighted vendor material, dev reference only)
+Api application/
+
+# Nested repo — keep out of this repo until it's replaced (see plan Phase 3)
+tools/cwm-gateway/
+
+# Generated AnythingLLM skill bundle (reproducible from OpenAPI via tools/generate-skills.mjs)
+agent-skills/msp-api-generated/
+tools/__gen_out/
+tools/__fixture_openapi.json
+tools/__gen_smoke.cjs
+
+# Empty scratch files and per-machine Claude Code settings
+tools/__*
+.claude/settings.local.json

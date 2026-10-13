@@ -1,0 +1,29 @@
+name: client-health
+title: "Health check: {{client}}"
+description: >-
+  One-stop status for a client — which tools it is linked in, what's missing, name drift, machines missing a
+  required tool, and open PSA tickets. Use for "how is <client> doing", "check <client>", "is <client> healthy".
+params:
+  client: {type: string, description: Client id or code (search_clients first if you only have a name)}
+steps:
+  - tool: get_client
+    args: {client: "{{client}}"}
+    as: client
+    pick: [client_code, standard_name, legal_name, psa_company_id, av_vendor, status, compliance]
+  - tool: client_devices
+    args: {client: "{{client}}", missing_only: true}
+    as: uncovered
+    pick: [coverage.hosts_total, coverage.hosts_fully_covered, coverage.device_counts, coverage.hosts]
+    optional: true
+  - tool: search_tickets
+    args: {conditions: "closedFlag=false and company/id={{steps.client.psa_company_id}}", limit: 25}
+    as: open_tickets
+    when: steps.client.psa_company_id
+    optional: true
+present: |
+  Start with one line: healthy, or the number of problems. Then:
+  - Missing tools (compliance.missing_platforms) and name drift — say what to do (onboard_finish for a missing
+    Asio/AV, the installer for ScreenConnect, apply_standard_name for drift).
+  - Machines not fully covered: "X of Y fully covered", then list the hostnames and what each is missing.
+  - Open tickets: count, then the oldest/highest-priority few.
+  Keep it short; offer client_devices or get_ticket for detail.

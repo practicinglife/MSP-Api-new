@@ -1,0 +1,21 @@
+name: av-gaps
+title: Machines missing antivirus
+description: >-
+  Which managed machines don't have their antivirus (SentinelOne or ESET didn't deploy, wrong product, Defender
+  only), by client, with what's already flagged or being redeployed. Use for "machines without antivirus",
+  "AV didn't deploy", "SentinelOne/ESET missing", "antivirus gaps", "no AV at <client>".
+params:
+  client: {type: string, description: Client code (optional — omit for every client), required: false}
+steps:
+  - tool: av_gaps
+    args: {client: "{{client}}"}
+    as: gaps
+    pick: [swept_at, checked, totals, fix_client_av, clients.*.client_code, clients.*.client, clients.*.av_vendor,
+           clients.*.counts, clients.*.machines]
+present: |
+  Lead with totals: checked, no antivirus, wrong antivirus, stale, and when the sweep ran (say if it's older than a
+  day and offer to refresh at /av-review). Then per client (most gaps first): expected AV, and the machines with
+  status, what was found, online/last contact, and review status. Skip stale machines unless asked.
+  Next steps: flag for review → propose_change('av_flag_for_review', {client_codes: [...]}) ; redeploy one client →
+  propose_change('av_remediate', {client_code}). Both are changes (Editor submits, an Approver approves).
+  Clients under fix_client_av need exactly one AV linked in the registry first.

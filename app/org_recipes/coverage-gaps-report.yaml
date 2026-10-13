@@ -1,0 +1,35 @@
+name: coverage-gaps-report
+title: Coverage gaps across all clients
+description: >-
+  Company-wide report of clients missing a required tool (antivirus, ScreenConnect, Asio, PSA) or running both
+  antivirus products, with overall counts. Use for "which clients are missing AV/ScreenConnect/Asio",
+  "coverage report", "compliance overview".
+params: {}
+steps:
+  - tool: clients_summary
+    args: {}
+    as: summary
+  - tool: list_clients
+    args: {issue: "missing:antivirus"}
+    as: missing_antivirus
+    pick: [count, clients.*.client_code, clients.*.standard_name]
+  - tool: list_clients
+    args: {issue: "missing:screenconnect"}
+    as: missing_screenconnect
+    pick: [count, clients.*.client_code, clients.*.standard_name]
+  - tool: list_clients
+    args: {issue: "missing:asio"}
+    as: missing_asio
+    pick: [count, clients.*.client_code, clients.*.standard_name]
+  - tool: list_clients
+    args: {issue: "antivirus:both"}
+    as: both_antivirus
+    pick: [count, clients.*.client_code, clients.*.standard_name]
+  - tool: data_freshness
+    args: {}
+    as: freshness
+    pick: [company_lists_last_sync]
+present: |
+  Open with the overall numbers from summary (clients, compliant vs not) and how fresh the data is.
+  Then one short section per gap (antivirus, ScreenConnect, Asio, both AV) with the count and the client codes +
+  names. Skip empty sections. End with the single most useful next step.

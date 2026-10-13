@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fictional SAP Gateway-style OData V2 service for tests. -->
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx"
+           xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+           xmlns:sap="http://www.sap.com/Protocols/SAPData">
+  <edmx:DataServices m:DataServiceVersion="2.0">
+    <Schema Namespace="ZTEST_SRV" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+      <EntityType Name="Customer" sap:label="Customer">
+        <Key><PropertyRef Name="CustomerID"/></Key>
+        <Property Name="CustomerID" Type="Edm.String" Nullable="false" sap:label="Customer Number"/>
+        <Property Name="Name1" Type="Edm.String" sap:label="Customer Name"/>
+        <Property Name="Credit" Type="Edm.Decimal" sap:label="Credit Limit"/>
+      </EntityType>
+      <EntityType Name="Invoice" sap:label="Billing Document">
+        <Key><PropertyRef Name="InvoiceID"/><PropertyRef Name="Year"/></Key>
+        <Property Name="InvoiceID" Type="Edm.String" Nullable="false" sap:label="Billing Doc."/>
+        <Property Name="Year" Type="Edm.Int32" Nullable="false" sap:label="Fiscal Year"/>
+        <Property Name="Amount" Type="Edm.Decimal"/>
+      </EntityType>
+      <EntityContainer Name="ZTEST_SRV_Entities" m:IsDefaultEntityContainer="true">
+        <EntitySet Name="CustomerSet" EntityType="ZTEST_SRV.Customer" sap:label="Customers"/>
+        <EntitySet Name="InvoiceSet" EntityType="ZTEST_SRV.Invoice" sap:creatable="false" sap:updatable="false"
+                   sap:deletable="false"/>
+        <FunctionImport Name="GetTopCustomers" ReturnType="Collection(ZTEST_SRV.Customer)" EntitySet="CustomerSet"
+                        m:HttpMethod="GET" sap:label="Top customers by revenue">
+          <Parameter Name="Count" Type="Edm.Int32" Mode="In"/>
+        </FunctionImport>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

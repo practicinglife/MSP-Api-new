@@ -1,0 +1,23 @@
+name: client-discrepancies
+title: Discrepancies across Asio, ScreenConnect, PSA and antivirus
+description: >-
+  Where the tools disagree — machines in Asio without ScreenConnect or a PSA configuration, orphaned or duplicate
+  PSA configurations, machines missing the Asio agent, machines under the wrong company, antivirus missing or on a
+  Hyper-V host / SQL server / domain controller. All companies or one. Use for "discrepancies", "what doesn't
+  match", "counts don't line up", "is <client> consistent", "missing ScreenConnect", "not in PSA".
+params:
+  client: {type: string, description: Client code (optional — omit for every company), required: false}
+steps:
+  - tool: discrepancies
+    args: {client: "{{client}}"}
+    as: report
+present: |
+  All companies: lead with the totals line (Asio vs ScreenConnect vs PSA, AV expected vs installed) and the issue
+  totals, then the companies with the most issues (counts that differ from Asio are the headline).
+  One company: per issue type, the machines and what to do —
+  missing ScreenConnect → install it; not in PSA → check the Asio↔PSA sync for that company;
+  orphaned/duplicate PSA configs → propose_change('psa_inactivate_orphans', {client_code});
+  PSA matched by name only → propose_change('fix_psa_endpoint_ids', {client});
+  missing Asio → install the agent; wrong company → fix the company in the named tool;
+  AV missing → AV review (av_remediate); AV on a Hyper-V/SQL/DC server → remove it (or correct the role on the
+  discrepancies page if the detection is wrong); stale → probably retired, offboard.

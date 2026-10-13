@@ -1,0 +1,93 @@
+openapi: 3.0.3
+info:
+  title: Petstore (test)
+  version: "1.0"
+  description: Fictional API for tests.
+servers:
+  - url: https://{env}.petstore.example.com/v1
+    variables:
+      env:
+        default: api
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  parameters:
+    PetId:
+      name: petId
+      in: path
+      required: true
+      description: The pet's id
+      schema:
+        type: integer
+  schemas:
+    Pet:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 50
+        tag:
+          type: string
+          nullable: true
+        parent:
+          $ref: "#/components/schemas/Pet"
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List all pets
+      tags: [pets]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, maximum: 100}
+        - name: X-Request-Id
+          in: header
+          schema: {type: string}
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Pet"}
+    post:
+      operationId: createPet
+      summary: Create a pet
+      tags: [pets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/Pet"}
+      responses:
+        "201": {description: created}
+  /pets/{petId}:
+    parameters:
+      - $ref: "#/components/parameters/PetId"
+    get:
+      operationId: showPetById
+      summary: Info for a specific pet
+      tags: [pets]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Pet"}
+    delete:
+      operationId: deletePet
+      summary: Delete a pet
+      deprecated: true
+      responses:
+        "204": {description: deleted}
