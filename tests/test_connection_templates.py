@@ -240,6 +240,33 @@ def test_screenconnect_post_reads_are_marked_read_only(admin):  # type: ignore[n
     assert not by_target[("POST", "/SendCommandToSession")]["read_only"]
 
 
+def test_template_post_reads_skip_the_write_mode_but_hand_labels_cannot(admin):  # type: ignore[no-untyped-def]
+    import httpx
+    import respx
+
+    admin.post("/api/connections/from-template", json={"template": "screenconnect", "values": {
+        "instance_url": "https://acme.screenconnect.com", "auth_secret": "S"}})
+    assert admin.put("/api/admin/write-modes/cw_control", json={"write_mode": "approval"}).status_code == 200
+    ops = admin.get("/api/connections/cw_control/operations?limit=50").json()["operations"]
+    by_target = {(o["method"], o["target"]): o["name"] for o in ops}
+    read, write = by_target[("POST", "/GetSessionsByFilter")], by_target[("POST", "/SendCommandToSession")]
+    r = admin.patch(f"/api/connections/cw_control/operations/{write}", json={"read_only": True})
+    assert r.status_code == 400 and "write mode" in r.json()["detail"]
+    # switching a template read off and back on is fine; re-importing keeps it
+    assert admin.patch(f"/api/connections/cw_control/operations/{read}", json={"read_only": False}).status_code == 200
+    assert admin.patch(f"/api/connections/cw_control/operations/{read}", json={"read_only": True}).status_code == 200
+    assert admin.post("/api/connections/cw_control/reimport", json={}).status_code == 200
+    key = admin.post("/api/admin/api-keys", json={"name": "r", "scopes": ["cw_control:read"]}).json()["key"]
+    admin.cookies.clear()
+
+    base = "https://acme.screenconnect.com/App_Extensions/2d558935-686a-4bd0-9991-07539f5fe749/Service.ashx"
+    with respx.mock(assert_all_called=False) as mock:
+        route = mock.post(f"{base}/GetSessionsByFilter").mock(return_value=httpx.Response(200, json=[]))
+        r = admin.post(f"/api/connections/cw_control/operations/{read}/call",
+                       json={"args": {"body": ["SessionType = 'Access'"]}}, headers={"X-API-Key": key})
+        assert r.status_code == 200 and route.called, r.text
+
+
 # ── The sign-in types the MSP tools need ────────────────────────────────────────────────────────────────────
 
 

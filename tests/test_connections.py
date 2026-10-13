@@ -575,3 +575,85 @@ def test_calls_are_audited(test_client, db_factory) -> None:  # type: ignore[no-
 
     found = {(r.action, r.status) for r in asyncio.run(rows())}
     assert ("petstore.show_pet_by_id", 200) in found and ("petstore.create_pet", 403) in found
+
+
+# ── Read-only labels can't let a write skip the write mode ─────────────────────────────────────────────────
+
+
+def test_marking_a_write_read_only_does_not_skip_the_write_mode(app_client, db_factory) -> None:  # type: ignore[no-untyped-def]
+    from sqlalchemy import select, update
+
+    from app.db.schema import AuditLog, Operation
+
+    app_client.cookies.set("msp_session", make_session(db_factory, ADMIN_ROLES, "approver@example.com"))
+    _create(app_client, kind="openapi", name="Petstore", source={"text": _text("petstore.yaml")})
+    _mode(app_client, "petstore", "approval")
+    key = app_client.post("/api/admin/api-keys", json={"name": "r", "scopes": ["petstore:read"]}).json()["key"]
+
+    # An Approver can't relabel a POST as read-only …
+    r = app_client.patch("/api/connections/petstore/operations/create_pet", json={"read_only": True})
+    assert r.status_code == 400 and "write mode" in r.json()["detail"]
+    assert app_client.get("/api/connections/petstore/operations/create_pet").json()["read_only"] is False
+    # … GET operations can be switched off and back on as before
+    assert app_client.patch("/api/connections/petstore/operations/show_pet_by_id",
+                            json={"read_only": False}).json()["read_only"] is False
+    assert app_client.patch("/api/connections/petstore/operations/show_pet_by_id",
+                            json={"read_only": True}).json()["read_only"] is True
+
+    # Even a label stored before this rule (or by any other path) doesn't open the gate
+    async def force_label() -> None:
+        async with db_factory() as db:
+            await db.execute(update(Operation).where(Operation.name == "create_pet").values(read_only=True))
+            await db.commit()
+
+    asyncio.run(force_label())
+    app_client.cookies.clear()
+    headers = {"X-API-Key": key}
+    with respx.mock(assert_all_called=False) as mock:
+        vendor = mock.post("https://api.petstore.example.com/v1/pets").mock(return_value=httpx.Response(201, json={}))
+        r = app_client.post("/api/connections/petstore/operations/create_pet/call",
+                            json={"args": {"body": {"name": "x"}}}, headers=headers)
+        assert r.status_code == 202 and r.json()["pending_approval"] is True, r.text
+        assert not vendor.called
+        mock.get("https://api.petstore.example.com/v1/pets/1").mock(return_value=httpx.Response(200, json={"id": 1}))
+        assert app_client.post("/api/connections/petstore/operations/show_pet_by_id/call",
+                               json={"args": {"petId": 1}}, headers=headers).status_code == 200
+
+    app_client.cookies.set("msp_session", make_session(db_factory, ADMIN_ROLES, "approver@example.com"))
+    _mode(app_client, "petstore", "read_only")
+    app_client.cookies.clear()
+    with respx.mock(assert_all_called=False) as mock:
+        vendor = mock.post("https://api.petstore.example.com/v1/pets").mock(return_value=httpx.Response(201, json={}))
+        r = app_client.post("/api/connections/petstore/operations/create_pet/call",
+                            json={"args": {"body": {"name": "x"}}}, headers=headers)
+        assert r.status_code == 403 and not vendor.called
+
+    async def label_audit() -> list[AuditLog]:
+        async with db_factory() as db:
+            return list((await db.execute(select(AuditLog).where(AuditLog.action.like("petstore.%.read_only"))
+                                          .order_by(AuditLog.id))).scalars())
+
+    rows = [(r.action, r.status, r.detail["old"], r.detail["new"], r.principal) for r in asyncio.run(label_audit())]
+    assert rows == [("petstore.create_pet.read_only", 400, False, True, "approver@example.com"),
+                    ("petstore.show_pet_by_id.read_only", 200, True, False, "approver@example.com"),
+                    ("petstore.show_pet_by_id.read_only", 200, False, True, "approver@example.com")]
+
+
+def test_reimport_drops_read_only_labels_the_definition_no_longer_backs(test_client, db_factory) -> None:  # type: ignore[no-untyped-def]
+    from sqlalchemy import update
+
+    from app.db.schema import Operation
+
+    _create(test_client, kind="openapi", name="Petstore", source={"text": _text("petstore.yaml")})
+
+    async def force_label() -> None:
+        async with db_factory() as db:
+            await db.execute(update(Operation).where(Operation.name == "create_pet").values(read_only=True))
+            await db.commit()
+
+    asyncio.run(force_label())
+    test_client.patch("/api/connections/petstore/operations/show_pet_by_id", json={"read_only": False})
+    test_client.post("/api/connections/petstore/reimport", json={})
+    ops = {o["name"]: o for o in test_client.get("/api/connections/petstore/operations").json()["operations"]}
+    assert ops["create_pet"]["read_only"] is False      # not backed by the definition
+    assert ops["show_pet_by_id"]["read_only"] is False  # a person's "this writes" is kept

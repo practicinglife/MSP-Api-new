@@ -115,15 +115,34 @@ async def _discover(ctx: ConnCtx, source: dict[str, Any]) -> ImportResult:
         raise CallError("Reading the definition took longer than 5 minutes", 504) from exc
 
 
+def runs_without_write_gate(op: Operation) -> bool:
+    """Whether a call may skip the write mode: the operation is labelled read-only *and* that label comes from the
+    definition itself or from a shipped template's list (e.g. ScreenConnect's POST lookups). A label a person set
+    by hand on a write (POST, mutation, …) never counts — rows from before this rule were reset by migration 0004,
+    and this check keeps the guarantee even if one slipped through."""
+    return bool(op.read_only) and (bool(op.defined_read_only) or bool(op.read_only_template))
+
+
+def _kept_read_only(prev: Operation | None, op: OperationDef) -> tuple[bool, bool]:
+    """(read_only, read_only_template) for a re-imported operation: a person's "this writes" is kept; "this only
+    reads" is kept only while the definition or the template still vouches for it."""
+    if prev is None:
+        return op.read_only, False
+    template = bool(prev.read_only_template)
+    return bool(prev.read_only) and (op.read_only or template), template
+
+
 def _rows(connection_id: str, ops: list[OperationDef], keep: dict[str, Operation] | None = None) -> list[Operation]:
     rows = []
     for op in ops:
         prev = (keep or {}).get(op.key)
+        read_only, template = _kept_read_only(prev, op)
         rows.append(Operation(
             id=str(uuid4()), connection_id=connection_id, key=op.key[:255], name=op.name[:128], title=op.title[:512],
             description=op.description, tags=op.tags, method=op.method[:16], target=op.target,
             input_schema=op.input_schema, output_schema=op.output_schema, binding=op.binding,
-            read_only=prev.read_only if prev else op.read_only, pinned=prev.pinned if prev else False,
+            read_only=read_only, defined_read_only=op.read_only, read_only_template=template,
+            pinned=prev.pinned if prev else False,
             enabled=prev.enabled if prev else True, deprecated=op.deprecated, search_text=op.search_text()))
     return rows
 
@@ -301,21 +320,31 @@ async def free_slug(slug: str) -> str:
 
 
 async def flag_by_path(slug: str, wanted: list[tuple[str, str]], flag: str, actor: str) -> list[str]:
-    """Set ``flag`` (``pinned`` or ``read_only``) on the operations matching (METHOD, /path). Returns their names."""
+    """Set ``flag`` (``pinned`` or ``read_only``) on the operations matching (METHOD, /path). Returns their names.
+
+    ``read_only`` is for a shipped template's list only (``connection_templates.read_only``): it is what lets a
+    vendor's POST lookups run without the write mode, so never pass it paths a person typed."""
     if not wanted:
         return []
     keys = {(m.upper(), p) for m, p in wanted}
+    relabelled: list[tuple[str, bool]] = []
     async with get_session_factory()() as db:
         conn = await _get(db, slug)
         ops = (await db.execute(select(Operation).where(Operation.connection_id == conn.id))).scalars().all()
         changed = []
         for op in ops:
             if ((op.method or "").upper(), op.target or "") in keys:
+                if flag == "read_only":
+                    relabelled.append((op.name, bool(op.read_only)))
+                    op.read_only_template = True
                 setattr(op, flag, True)
                 changed.append(op.name)
         if changed:
             conn.updated_at = _now()  # tells the search index to rebuild
             await db.commit()
+    for name, old in relabelled:
+        if not old:
+            await _audit_read_only(slug, name, old, True, actor, how="template")
     log.info("operations.flagged", slug=slug, flag=flag, operations=changed, by=actor)
     return changed
 
@@ -373,17 +402,40 @@ async def get_operation(slug: str, name: str) -> dict[str, Any]:
         return op_summary(await _find_op(db, conn, name), full=True)
 
 
+async def _audit_read_only(slug: str, op_name: str, old: bool, new: bool, actor: str, *, how: str,
+                           status: int = 200) -> None:
+    """One audit entry per change (or refused change) of an operation's read-only label."""
+    principal = get_current()
+    await audit.record(principal=actor or "system", auth_kind=principal.kind if principal else "internal",
+                       source=principal.source if principal else "internal", method="PATCH",
+                       path=f"/api/connections/{slug}/operations/{op_name}", action=f"{slug}.{op_name}.read_only",
+                       status=status, detail={"field": "read_only", "old": old, "new": new, "how": how})
+
+
 async def update_operation(slug: str, name: str, body: dict[str, Any], actor: str) -> dict[str, Any]:
+    """Pin / enable / relabel one operation. Read-only can always be switched *off* (calls then go through the
+    write mode); switching it *on* is only allowed where the definition or a shipped template says the operation
+    only reads — a POST, mutation … can't be made to skip the write mode or approval by hand."""
     async with get_session_factory()() as db:
         conn = await _get(db, slug)
         op = await _find_op(db, conn, name)
+        old_read_only = bool(op.read_only)
+        wants_read = "read_only" in body and bool(body["read_only"])
+        if wants_read and not old_read_only and not (op.defined_read_only or op.read_only_template):
+            await _audit_read_only(slug, op.name, False, True, actor, how="manual", status=400)
+            what = f"a {op.method} operation" if op.method and op.method != "CALL" else "an operation that writes"
+            raise CallError(f"Can't mark {what} ('{op.name}') read-only: its definition says it changes data. "
+                            "Set the connection's write mode instead (approval sends each call for approval).", 400)
         for field in ("pinned", "enabled", "read_only"):
             if field in body:
                 setattr(op, field, bool(body[field]))
         conn.updated_at = _now()  # tells the search index to rebuild
         await db.commit()
         log.info("operation.updated", slug=slug, op=op.name, by=actor, fields=sorted(body))
-        return op_summary(op, full=True)
+        out = op_summary(op, full=True)
+    if bool(out["read_only"]) != old_read_only:
+        await _audit_read_only(slug, out["name"], old_read_only, bool(out["read_only"]), actor, how="manual")
+    return out
 
 
 # ── Calling ───────────────────────────────────────────────────────────────
@@ -462,6 +514,7 @@ async def call_operation(slug: str, name: str, args: dict[str, Any], *, approved
         conn = await _get(db, slug)
         op = await _find_op(db, conn, name)
     who = principal.label() if principal else "system"
+    is_write = not runs_without_write_gate(op)
     status, error = 200, None
     try:
         if not conn.enabled or not op.enabled:
@@ -470,7 +523,7 @@ async def call_operation(slug: str, name: str, args: dict[str, Any], *, approved
             raise CallError(f"Your credential may not use '{slug}'", 403)
         validate_args(_without_supplied_headers(op, conn), args)
 
-        if not op.read_only and not approved:
+        if is_write and not approved:
             from fastapi import HTTPException
 
             from app.auth.write_mode import APPROVAL, enforce_direct_write, get_write_mode
@@ -502,7 +555,7 @@ async def call_operation(slug: str, name: str, args: dict[str, Any], *, approved
                                source=principal.source if principal else "internal", method="CALL",
                                path=f"/api/connections/{slug}/operations/{op.name}/call",
                                action=f"{slug}.{op.name}", status=status,
-                               detail={"args_sha": audit.args_digest(args), "write": not op.read_only,
+                               detail={"args_sha": audit.args_digest(args), "write": is_write,
                                        **({"approved_change": True} if approved else {}),
                                        **({"error": error[:200]} if error else {})})
 

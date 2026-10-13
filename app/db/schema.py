@@ -3,6 +3,8 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text, UniqueConstraint
+from sqlalchemy import false as sa_false
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.auth.crypto import EncryptedJSON
@@ -914,6 +916,13 @@ class Operation(Base):
     output_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     binding: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # type: ignore[type-arg]
     read_only: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Where ``read_only`` may come from: the definition's own verdict (GET, GraphQL query, MCP readOnlyHint …),
+    # refreshed on every import, and a shipped template's "only reads although it isn't GET" list. A person can
+    # only ever make an operation *stricter* by hand (see app/connections/service.py: runs_without_write_gate).
+    defined_read_only: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                                    server_default=sa_true())
+    read_only_template: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False,
+                                                     server_default=sa_false())
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     deprecated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

@@ -44,6 +44,12 @@ data.
   - read-only is the default for every new connection
   - direct lets Editors write
   - approval turns every write into a change request: an Editor submits it and an Approver gives final approval
+- **Read or write is the definition's call, not a person's.** An operation runs without the write mode only when
+  its definition says it reads (GET, GraphQL query, MCP `readOnlyHint` …) or a shipped template lists it as a
+  read (ScreenConnect, ESET MSP and other vendors that read with POST). Anyone managing connections can mark an
+  operation as a write, but nobody can mark a write (POST, mutation …) read-only by hand: the request is refused,
+  and the call path checks where the label came from too, so a label stored any other way still goes through
+  the write mode. Each label change, and each refused attempt, is audit-logged with who and old → new.
 - **SQL and MongoDB connections are read-only.** Queries are checked and run in read-only transactions where the
   database supports it.
 - **Syncs (local copies)** can only use read operations.

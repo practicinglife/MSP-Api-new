@@ -60,8 +60,8 @@ Drop `dry_run` to save it. Then:
 - `GET /api/connections/{slug}/operations?q=invoice` — search a connection's operations
 - `GET /api/connections/{slug}/operations/{name}` — full input/output schema
 - `POST /api/connections/{slug}/operations/{name}/call` with `{"args": {…}}` — call it
-- `PATCH /api/connections/{slug}/operations/{name}` with `{"pinned": true}`, `{"enabled": false}` or `{"read_only": true}`
-- `POST /api/connections/{slug}/reimport` — re-read the definition (your pinned / enabled / read-only choices are kept)
+- `PATCH /api/connections/{slug}/operations/{name}` with `{"pinned": true}`, `{"enabled": false}` or `{"read_only": false}` (see Writes)
+- `POST /api/connections/{slug}/reimport` — re-read the definition (your pinned / enabled choices and "this writes" labels are kept)
 - `PATCH /api/connections/{slug}` — rename, change base URL, rotate credentials (`{"auth": {...}}`), enable/disable
 
 ## Auth types
@@ -89,7 +89,12 @@ Each connection's slug is also its **write mode** platform name (Admin → write
   Approver approves it.
 
 Read-only is decided per operation from the definition (HTTP GET/HEAD, GraphQL query, OData read, SOAP names
-starting Get/List/Find…, MCP `readOnlyHint`) and can be overridden per operation.
+starting Get/List/Find…, MCP `readOnlyHint`). A call skips the write mode only when that label is backed by the
+definition or by a shipped template's `read_only` list (vendors that read with POST, e.g. ScreenConnect's
+`GetSessionsByFilter`, ESET MSP's `/api/Company/Children`). By hand you can only make an operation stricter:
+`{"read_only": false}` always works, but `{"read_only": true}` on an operation the definition calls a write (a
+POST, a GraphQL mutation …) is refused with `400` — set the connection's write mode instead. Every change of the
+label, and every refused attempt, is in the audit log (action `<slug>.<operation>.read_only`, old → new).
 
 ## Safety
 
