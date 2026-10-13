@@ -1,0 +1,111 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: IT Glue API
+  version: starter
+  description: 'Starter definition: organizations, configurations, contacts, locations
+    and flexible asset types. Made for API Tools connection templates; re-import a
+    fuller definition if the vendor publishes one.'
+paths:
+  /organizations:
+    get:
+      operationId: listOrganizations
+      summary: List organizations
+      parameters:
+      - name: filter[name]
+        in: query
+        required: false
+        description: Name
+        schema:
+          type: string
+      - &id001
+        name: page[size]
+        in: query
+        required: false
+        description: Page size
+        schema:
+          type: integer
+      - &id002
+        name: page[number]
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /organizations/{id}:
+    get:
+      operationId: getOrganization
+      summary: Get an organization
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Organization ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /configurations:
+    get:
+      operationId: listConfigurations
+      summary: List configurations (devices)
+      parameters:
+      - name: filter[organization_id]
+        in: query
+        required: false
+        description: Organization ID
+        schema:
+          type: integer
+      - name: filter[name]
+        in: query
+        required: false
+        description: Name
+        schema:
+          type: string
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /contacts:
+    get:
+      operationId: listContacts
+      summary: List contacts
+      parameters:
+      - name: filter[organization_id]
+        in: query
+        required: false
+        description: Organization ID
+        schema:
+          type: integer
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /locations:
+    get:
+      operationId: listLocations
+      summary: List locations
+      parameters:
+      - name: filter[organization_id]
+        in: query
+        required: false
+        description: Organization ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /flexible_asset_types:
+    get:
+      operationId: listFlexibleAssetTypes
+      summary: List flexible asset types
+      parameters: []
+      responses:
+        '200':
+          description: OK

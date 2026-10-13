@@ -53,6 +53,34 @@
         .badge-red { background: rgba(239,68,68,.15); color: var(--red); }
         .badge-blue { background: rgba(56,189,248,.15); color: var(--accent); }
 
+        /* Match companies */
+        .tab .tab-count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9999px;
+                          background: var(--yellow); color: #0f172a; font-size: 0.7rem; font-weight: 700; line-height: 18px; }
+        .intro-banner { border: 1px solid var(--accent); background: rgba(56,189,248,.08); border-radius: 8px;
+                        padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-start; }
+        .intro-banner h3 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+        .intro-banner p { font-size: 0.875rem; color: var(--text); line-height: 1.5; }
+        .match-section { margin-bottom: 28px; }
+        .match-section > h3 { font-size: 0.95rem; margin-bottom: 4px; }
+        .match-section > .hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+        .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+                      padding: 14px 16px; margin-bottom: 10px; }
+        .match-card.done, tr.done { opacity: 0.45; pointer-events: none; }
+        .match-names { font-size: 0.95rem; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+        .match-arrow { color: var(--muted); font-weight: 400; }
+        .match-reason { font-size: 0.8rem; color: var(--muted); margin: 6px 0 10px; }
+        .match-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .match-actions .btn { padding: 5px 12px; font-size: 0.8rem; }
+        .match-actions input { padding: 5px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+                               color: var(--text); font-size: 0.8rem; min-width: 240px; }
+        .btn-good { border-color: var(--green); color: var(--green); }
+        .btn-quiet { color: var(--muted); }
+        .tool-chip { font-size: 0.7rem; font-weight: 500; color: var(--muted); border: 1px solid var(--border);
+                     border-radius: 4px; padding: 1px 6px; }
+        .score { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
+        details.match-list summary { cursor: pointer; font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; }
+        details.match-list td { padding: 8px 12px; }
+
         /* Search */
         .search-bar { display: flex; gap: 12px; margin-bottom: 16px; }
         .search-bar input { flex: 1; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
@@ -159,6 +187,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('runs')">Runs</button>
             <button class="tab" onclick="switchTab('companies')">Companies</button>
+            <button class="tab" id="matching-tab-btn" onclick="switchTab('matching')">Match companies<span id="matching-count"></span></button>
             <button class="tab" onclick="switchTab('breakdown')">Breakdown</button>
             <button class="tab" onclick="switchTab('scasio')">SC vs Asio</button>
             <button class="tab" onclick="switchTab('devices')">Devices</button>
@@ -197,6 +226,14 @@
             <div id="overrides-section"></div>
             <div id="aliases-section"></div>
             <div id="platform-companies-section" style="margin-top:24px;"></div>
+        </div>
+
+        <!-- MATCH COMPANIES TAB — automatic links, suggestions to answer, names in only one tool -->
+        <div id="tab-matching" class="tab-panel">
+            <div id="matching-intro"></div>
+            <div id="matching-summary" class="stats" style="margin-bottom:20px;"></div>
+            <div id="matching-body"><div class="empty-state"><div class="spinner"></div><p>Checking company names…</p></div></div>
+            <datalist id="matching-company-list"></datalist>
         </div>
 
         <!-- BREAKDOWN TAB — Reconciled Matched / Mismatched View -->
@@ -264,12 +301,17 @@
 
         <!-- CONNECTORS TAB -->
         <div id="tab-connectors" class="tab-panel">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h3 style="font-size:1rem;color:var(--muted);">Registered Integrations</h3>
-                <button class="btn btn-primary" onclick="openAddConnector()">+ Add Connector</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+                <h3 style="font-size:1rem;color:var(--muted);">Integrations</h3>
+                <div style="display:flex;gap:8px;">
+                    <a class="btn" style="text-decoration:none" href="/connections">Manage on Connections</a>
+                    <a class="btn btn-primary" style="text-decoration:none" href="/connections#add">+ Add connection</a>
+                </div>
             </div>
-            <div id="connectors-grid" class="stats"></div>
-            <div id="saved-configs" style="margin-top:16px;"></div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">The same list as the Connections page: built-in tools
+                (credentials stored encrypted, or from .env) and any other API you've connected.</div>
+            <div id="connectors-grid"></div>
+            <div id="other-connections" style="margin-top:16px;"></div>
             <table id="connectors-table" style="margin-top:16px;">
                 <thead>
                     <tr><th>Platform</th><th>Status</th><th>Latency</th><th>Companies</th><th>Error</th><th></th></tr>
@@ -455,47 +497,6 @@
     <div id="drawer" class="drawer">
         <button class="close-btn" onclick="closeDrawer()">&times;</button>
         <div id="drawer-content"></div>
-    </div>
-
-    <!-- Add Connector Modal -->
-    <div id="add-connector-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
-        <div class="modal">
-            <h2>&#x1F50C; Add API Connector</h2>
-            <div class="form-group">
-                <label>Platform</label>
-                <select id="modal-platform" onchange="renderCredentialFields()">
-                    <option value="">Select a platform...</option>
-                </select>
-            </div>
-            <div id="modal-fields"></div>
-            <div id="modal-test-result"></div>
-            <div class="form-actions">
-                <button class="btn" onclick="closeModal()">Cancel</button>
-                <button class="btn" id="modal-test-btn" onclick="testBeforeRegister()" disabled>Test Connection</button>
-                <button class="btn btn-primary" id="modal-save-btn" onclick="registerConnector()" disabled>Save &amp; Register</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Connector Modal -->
-    <div id="edit-connector-modal" class="modal-overlay" onclick="if(event.target===this)closeEditModal()">
-        <div class="modal">
-            <h2>&#x270F;&#xFE0F; Edit Connector: <span id="edit-modal-title"></span></h2>
-            <div id="edit-modal-fields"></div>
-            <div class="form-group">
-                <label>Enabled</label>
-                <select id="edit-modal-enabled">
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                </select>
-            </div>
-            <div id="edit-modal-test-result"></div>
-            <div class="form-actions">
-                <button class="btn" onclick="closeEditModal()">Cancel</button>
-                <button class="btn" id="edit-modal-test-btn" onclick="testEditConnector()">Test Connection</button>
-                <button class="btn btn-primary" id="edit-modal-save-btn" onclick="saveEditConnector()">Save Changes</button>
-            </div>
-        </div>
     </div>
 
     <!-- Merge Companies Modal -->
@@ -868,7 +869,6 @@
         let allCompanies = [];
         let allDevices = [];
         let logEntries = [];
-        let platformDefs = [];
 
         function addLog(level, message) {
             const now = new Date().toLocaleTimeString();
@@ -917,7 +917,9 @@
                 if (txt === name) t.classList.add('active');
                 else if (name === 'connectors' && txt === 'connectors') t.classList.add('active');
                 else if (name === 'explorer' && txt === 'api explorer') t.classList.add('active');
+                else if (name === 'matching' && t.id === 'matching-tab-btn') t.classList.add('active');
             });
+            if (name === 'matching') loadMatching();
             if (name === 'coverage') loadCoverage();
             if (name === 'alerts') loadAlerts();
             if (name === 'tickets') loadTickets();
@@ -1491,58 +1493,45 @@
             renderDevices(filtered);
         }
 
+        // Integrations = the Connections page's list: built-in tools (by role) + any other API connections.
         async function loadConnectors() {
             try {
-                const res = await fetch(`${API}/api/connectors`);
-                const connectors = await res.json();
+                const [catRes, connRes] = await Promise.all([fetch(`${API}/api/connectors/catalog`), fetch(`${API}/api/connections`)]);
+                const catalog = catRes.ok ? await catRes.json() : [];
+                const conns = connRes.ok ? await connRes.json() : [];
                 const grid = document.getElementById('connectors-grid');
-                const configured = connectors.filter(c => c.configured).length;
-                const notConfigured = connectors.length - configured;
-                grid.innerHTML = connectors.map(c => {
-                    const color = c.configured ? 'var(--green)' : c.saved ? 'var(--accent)' : 'var(--yellow)';
-                    const label = c.configured ? 'Configured' : c.saved ? 'Saved (DB)' : 'Not Configured';
-                    const missing = c.missing_config && c.missing_config.length
-                        ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">Missing: ${c.missing_config.join(', ')}</div>` : '';
-                    const testBtn = c.configured
-                        ? `<button class="btn" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" onclick="testSingle('${escapeHtml(c.platform)}')">&#x1F50C; Test</button>`
-                        : `<button class="btn" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;opacity:0.5;" disabled>Not Configured</button>`;
-                    return `<div class="stat-card" id="card-${escapeHtml(c.platform)}">
-                        <div class="label">${escapeHtml(c.platform)}</div>
-                        <div class="value" style="font-size:1rem;color:${color};">${label}</div>
-                        ${missing}
-                        <div style="margin-top:6px;">${testBtn}</div>
-                        <div id="test-result-${escapeHtml(c.platform)}" style="margin-top:6px;"></div>
-                    </div>`;
+                const roles = [['management', 'Management tools'], ['security', 'Security tools']];
+                const status = b => !b.enabled && b.credentials_from ? ['Off', 'var(--muted)']
+                    : b.connected ? [b.credentials_from === 'env' ? 'Connected (.env)' : 'Connected', 'var(--green)']
+                    : ['Not connected', 'var(--yellow)'];
+                grid.innerHTML = roles.map(([role, title]) => {
+                    const items = catalog.filter(b => b.role === role);
+                    if (!items.length) return '';
+                    return `<h4 style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px;">${title}</h4>
+                        <div class="stats">${items.map(b => {
+                            const [label, color] = status(b);
+                            const p = escapeAttr(b.platform);
+                            return `<div class="stat-card" id="card-${p}">
+                                <div class="label">${escapeHtml(b.label)}</div>
+                                <div class="value" style="font-size:1rem;color:${color};">${label}</div>
+                                <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">${b.detail_source ? 'adds device detail' : `${b.operations} operations`}</div>
+                                <div style="margin-top:8px;display:flex;gap:6px;">
+                                    ${b.connected ? `<button class="btn" style="font-size:0.75rem;padding:4px 10px;" onclick="testSingle('${p}')">&#x1F50C; Test</button>` : ''}
+                                    <a class="btn" style="font-size:0.75rem;padding:4px 10px;text-decoration:none" href="/connections?builtin=${p}">${b.connected ? 'Settings' : 'Set up'}</a>
+                                </div>
+                                <div id="test-result-${p}" style="margin-top:6px;"></div>
+                            </div>`;
+                        }).join('')}</div>`;
                 }).join('');
-                addLog('info', `${connectors.length} connector(s) registered — ${configured} configured, ${notConfigured} need config`);
-                await loadSavedConfigs();
-            } catch(e) { addLog('error', `Failed to load connectors: ${e.message}`); }
-        }
-
-        async function loadSavedConfigs() {
-            try {
-                const res = await fetch(`${API}/api/connectors/configs`);
-                const configs = await res.json();
-                const container = document.getElementById('saved-configs');
-                if (!configs.length) { container.innerHTML = ''; return; }
-                let html = '<h4 style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">Saved Configurations</h4>';
-                html += '<table><thead><tr><th>Platform</th><th>Enabled</th><th>Credentials</th><th>Created</th><th></th></tr></thead><tbody>';
-                configs.forEach(c => {
-                    const creds = Object.entries(c.credentials || {}).map(([k,v]) => `${k}: ${v}`).join(', ');
-                    html += `<tr>
-                        <td><strong>${escapeHtml(c.platform)}</strong></td>
-                        <td>${c.enabled ? statusBadge('ok') : statusBadge('error')}</td>
-                        <td style="font-size:0.8rem;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(creds)}</td>
-                        <td style="font-size:0.8rem;">${c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
-                        <td style="display:flex;gap:4px;">
-                            <button class="btn" onclick="openEditConnector('${escapeHtml(c.platform)}')" style="font-size:0.8rem;">&#x270F;&#xFE0F; Edit</button>
-                            <button class="btn" onclick="removeConnector('${c.platform}')" style="color:var(--red);border-color:var(--red);font-size:0.8rem;">Remove</button>
-                        </td>
-                    </tr>`;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            } catch(e) { addLog('error', `Failed to load saved configs: ${e.message}`); }
+                const others = conns.filter(c => c.kind !== 'builtin');
+                document.getElementById('other-connections').innerHTML = `<h4 style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px;">Other connections</h4>` +
+                    (others.length ? `<table><thead><tr><th>Name</th><th>Kind</th><th>Operations</th><th>Status</th></tr></thead><tbody>${others.map(c =>
+                        `<tr><td><a href="/connections" style="color:var(--accent)">${escapeHtml(c.name)}</a></td><td>${escapeHtml(c.kind)}</td><td>${c.operations}</td>
+                         <td>${c.enabled ? statusBadge('ok') : statusBadge('error')}</td></tr>`).join('')}</tbody></table>`
+                    : `<div style="font-size:0.85rem;color:var(--muted);">None yet. <a href="/connections#add" style="color:var(--accent)">Connect any API</a> (OpenAPI, Postman, GraphQL, SQL, …).</div>`);
+                const connected = catalog.filter(b => b.connected).length;
+                addLog('info', `${catalog.length} built-in integration(s), ${connected} connected; ${others.length} other connection(s)`);
+            } catch(e) { addLog('error', `Failed to load integrations: ${e.message}`); }
         }
 
         async function testAllConnectors() {
@@ -1578,7 +1567,7 @@
             const resultDiv = document.getElementById(`test-result-${platform}`);
             if (resultDiv) resultDiv.innerHTML = '<span class="spinner"></span> Testing...';
             try {
-                const res = await fetch(`${API}/api/connectors/test/${platform}`, { method: 'POST' });
+                const res = await fetch(`${API}/api/connectors/catalog/${encodeURIComponent(platform)}/test`, { method: 'POST' });
                 const r = await res.json();
                 addLog(r.status === 'ok' ? 'success' : 'error', `${r.platform}: ${r.status} (${r.latency_ms}ms) — ${r.companies_found || 0} companies${r.error ? ' - ' + r.error : ''}`);
                 renderConnectorTestResult(platform, r);
@@ -1594,7 +1583,7 @@
             const resultDiv = document.getElementById(`test-result-${platform}`);
             if (!resultDiv) return;
             if (r.status === 'ok') {
-                resultDiv.innerHTML = `<div style="font-size:0.75rem;color:var(--green);">&#x2705; OK — ${r.companies_found} companies (${r.latency_ms}ms)</div>`;
+                resultDiv.innerHTML = `<div style="font-size:0.75rem;color:var(--green);">&#x2705; OK — ${r.companies_found} ${escapeHtml(r.found_label || 'companies')} (${r.latency_ms}ms)</div>`;
             } else {
                 let html = `<div style="font-size:0.75rem;color:var(--red);">&#x274C; ${escapeHtml(r.status)}${r.error_type ? ' [' + escapeHtml(r.error_type) + ']' : ''}</div>`;
                 if (r.error) html += `<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;word-break:break-all;">${escapeHtml(r.error.substring(0, 200))}</div>`;
@@ -1695,195 +1684,6 @@
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
             }
-        }
-
-        // --- MODAL FUNCTIONS ---
-        async function loadPlatformDefs() {
-            try {
-                const res = await fetch(`${API}/api/connectors/platforms`);
-                platformDefs = await res.json();
-                const sel = document.getElementById('modal-platform');
-                sel.innerHTML = '<option value="">Select a platform...</option>';
-                platformDefs.forEach(p => {
-                    sel.innerHTML += `<option value="${escapeHtml(p.platform)}">${escapeHtml(p.label)}</option>`;
-                });
-            } catch(e) { addLog('error', `Failed to load platform definitions: ${e.message}`); }
-        }
-
-        function openAddConnector() {
-            document.getElementById('add-connector-modal').classList.add('open');
-            document.getElementById('modal-platform').value = '';
-            document.getElementById('modal-fields').innerHTML = '';
-            document.getElementById('modal-test-result').innerHTML = '';
-            document.getElementById('modal-test-btn').disabled = true;
-            document.getElementById('modal-save-btn').disabled = true;
-            if (!platformDefs.length) loadPlatformDefs();
-        }
-
-        function closeModal() {
-            document.getElementById('add-connector-modal').classList.remove('open');
-        }
-
-        function renderCredentialFields() {
-            const platform = document.getElementById('modal-platform').value;
-            const container = document.getElementById('modal-fields');
-            document.getElementById('modal-test-result').innerHTML = '';
-            document.getElementById('modal-save-btn').disabled = true;
-
-            if (!platform) {
-                container.innerHTML = '';
-                document.getElementById('modal-test-btn').disabled = true;
-                return;
-            }
-
-            const def = platformDefs.find(p => p.platform === platform);
-            if (!def) { container.innerHTML = '<p style="color:var(--red);">Unknown platform</p>'; return; }
-
-            let html = '';
-            def.fields.forEach(f => {
-                const req = f.required ? ' *' : '';
-                const defVal = f.default || '';
-                const showAttr = f.show_when_auth ? ` data-show-auth="${f.show_when_auth.join(',')}"` : '';
-                const hiddenStyle = f.show_when_auth ? ' style="display:none;"' : '';
-
-                if (f.type === 'select' && f.options) {
-                    let opts = f.options.map(o =>
-                        `<option value="${escapeHtml(o.value)}"${o.value === defVal ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
-                    ).join('');
-                    const onChange = f.key === 'auth_method' ? ' onchange="toggleAuthFields()"' : '';
-                    html += `<div class="form-group"${showAttr}${hiddenStyle}>
-                        <label>${escapeHtml(f.label)}${req}</label>
-                        <select id="cred-${f.key}"${onChange}>${opts}</select>
-                    </div>`;
-                } else {
-                    const inputType = f.type === 'password' ? 'password' : 'text';
-                    html += `<div class="form-group"${showAttr}${hiddenStyle}>
-                        <label>${escapeHtml(f.label)}${req}</label>
-                        <input type="${inputType}" id="cred-${f.key}" placeholder="${escapeHtml(f.label)}" value="${escapeHtml(defVal)}">
-                    </div>`;
-                }
-            });
-            container.innerHTML = html;
-            toggleAuthFields();
-            document.getElementById('modal-test-btn').disabled = false;
-        }
-
-        function toggleAuthFields() {
-            const authEl = document.getElementById('cred-auth_method');
-            if (!authEl) return;
-            const method = authEl.value;
-            document.querySelectorAll('#modal-fields [data-show-auth]').forEach(el => {
-                const allowed = el.getAttribute('data-show-auth').split(',');
-                el.style.display = allowed.includes(method) ? '' : 'none';
-            });
-        }
-
-        function _gatherCredentials() {
-            const platform = document.getElementById('modal-platform').value;
-            const def = platformDefs.find(p => p.platform === platform);
-            if (!def) return null;
-            const credentials = {};
-            def.fields.forEach(f => {
-                const val = document.getElementById(`cred-${f.key}`)?.value?.trim() || '';
-                if (val) credentials[f.key] = val;
-            });
-            return { platform, credentials };
-        }
-
-        async function testBeforeRegister() {
-            const data = _gatherCredentials();
-            if (!data) return;
-
-            const resultDiv = document.getElementById('modal-test-result');
-            const testBtn = document.getElementById('modal-test-btn');
-            const saveBtn = document.getElementById('modal-save-btn');
-            testBtn.disabled = true;
-            testBtn.innerHTML = '<span class="spinner"></span> Testing...';
-            resultDiv.innerHTML = '';
-            saveBtn.disabled = true;
-
-            try {
-                const res = await fetch(`${API}/api/connectors/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        platform: data.platform,
-                        credentials: data.credentials,
-                        test_connection: true,
-                    }),
-                });
-                const result = await res.json();
-
-                if (res.ok && result.status === 'registered') {
-                    resultDiv.innerHTML = `<div class="test-result success">&#x2705; Connection successful! ${result.test_result?.companies_found || 0} companies found. Connector saved and activated.</div>`;
-                    addLog('success', `${data.platform}: registered successfully (${result.test_result?.companies_found || 0} companies)`);
-                    saveBtn.disabled = true;
-                    setTimeout(() => { closeModal(); refreshAll(); }, 1500);
-                } else if (result.status === 'test_failed') {
-                    const err = result.test_result?.error || 'Connection failed';
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; Test failed: ${escapeHtml(err)}</div>`;
-                    addLog('error', `${data.platform}: test failed — ${err}`);
-                    saveBtn.disabled = false;
-                } else if (result.detail) {
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(result.detail)}</div>`;
-                    addLog('error', `${data.platform}: ${result.detail}`);
-                } else {
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; Unexpected response</div>`;
-                }
-            } catch(e) {
-                resultDiv.innerHTML = `<div class="test-result error">&#x274C; Request failed: ${escapeHtml(e.message)}</div>`;
-                addLog('error', `Test ${data.platform} failed: ${e.message}`);
-            }
-            testBtn.disabled = false;
-            testBtn.innerHTML = 'Test Connection';
-        }
-
-        async function registerConnector() {
-            const data = _gatherCredentials();
-            if (!data) return;
-
-            const saveBtn = document.getElementById('modal-save-btn');
-            const resultDiv = document.getElementById('modal-test-result');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
-
-            try {
-                const res = await fetch(`${API}/api/connectors/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        platform: data.platform,
-                        credentials: data.credentials,
-                        test_connection: false,
-                    }),
-                });
-                const result = await res.json();
-                if (res.ok && result.saved) {
-                    resultDiv.innerHTML = `<div class="test-result success">&#x2705; Connector saved (not tested).</div>`;
-                    addLog('info', `${data.platform}: saved without testing`);
-                    setTimeout(() => { closeModal(); refreshAll(); }, 1000);
-                } else {
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(result.detail || 'Save failed')}</div>`;
-                }
-            } catch(e) {
-                resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(e.message)}</div>`;
-            }
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = 'Save &amp; Register';
-        }
-
-        async function removeConnector(platform) {
-            if (!confirm(`Remove saved configuration for "${platform}"? The connector will be deactivated.`)) return;
-            try {
-                const res = await fetch(`${API}/api/connectors/configs/${platform}`, { method: 'DELETE' });
-                const result = await res.json();
-                if (res.ok) {
-                    addLog('info', `${platform}: connector removed`);
-                    refreshAll();
-                } else {
-                    addLog('error', `Remove ${platform} failed: ${result.detail || 'Unknown error'}`);
-                }
-            } catch(e) { addLog('error', `Remove ${platform} failed: ${e.message}`); }
         }
 
         // --- COVERAGE TAB ---
@@ -2583,137 +2383,6 @@
             }
         }
 
-
-        // --- EDIT CONNECTOR MODAL ---
-        let editPlatform = '';
-
-        async function openEditConnector(platform) {
-            editPlatform = platform;
-            document.getElementById('edit-modal-title').textContent = platform;
-            document.getElementById('edit-modal-test-result').innerHTML = '';
-
-            // Load saved config to pre-populate
-            const def = platformDefs.find(p => p.platform === platform);
-            if (!def) { addLog('error', `No platform definition for ${platform}`); return; }
-
-            let savedCreds = {};
-            try {
-                const res = await fetch(`${API}/api/connectors/configs`);
-                const configs = await res.json();
-                const cfg = configs.find(c => c.platform === platform);
-                if (cfg) {
-                    savedCreds = cfg.credentials || {};
-                    document.getElementById('edit-modal-enabled').value = cfg.enabled ? 'true' : 'false';
-                }
-            } catch(e) { /* ignore, fields will be empty */ }
-
-            let html = '';
-            def.fields.forEach(f => {
-                const existing = savedCreds[f.key] || '';
-                const showAttr = f.show_when_auth ? ` data-show-auth-edit="${f.show_when_auth.join(',')}"` : '';
-                const req = f.required ? ' *' : '';
-
-                if (f.type === 'select' && f.options) {
-                    let opts = f.options.map(o =>
-                        `<option value="${escapeHtml(o.value)}"${o.value === (existing || f.default || '') ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
-                    ).join('');
-                    const onChange = f.key === 'auth_method' ? ' onchange="toggleEditAuthFields()"' : '';
-                    html += `<div class="form-group"${showAttr}>
-                        <label>${escapeHtml(f.label)}${req}</label>
-                        <select id="edit-cred-${f.key}"${onChange}>${opts}</select>
-                    </div>`;
-                } else {
-                    const inputType = f.type === 'password' ? 'password' : 'text';
-                    const placeholder = existing === '••••••••' ? '(unchanged — leave blank to keep)' : (f.label || '');
-                    html += `<div class="form-group"${showAttr}>
-                        <label>${escapeHtml(f.label)}${req}</label>
-                        <input type="${inputType}" id="edit-cred-${f.key}" placeholder="${escapeHtml(placeholder)}" value="${existing === '••••••••' ? '' : escapeHtml(existing)}">
-                    </div>`;
-                }
-            });
-            document.getElementById('edit-modal-fields').innerHTML = html;
-            toggleEditAuthFields();
-            document.getElementById('edit-connector-modal').classList.add('open');
-        }
-
-        function toggleEditAuthFields() {
-            const authEl = document.getElementById('edit-cred-auth_method');
-            if (!authEl) return;
-            const method = authEl.value;
-            document.querySelectorAll('#edit-modal-fields [data-show-auth-edit]').forEach(el => {
-                const allowed = el.getAttribute('data-show-auth-edit').split(',');
-                el.style.display = allowed.includes(method) ? '' : 'none';
-            });
-        }
-
-        function closeEditModal() {
-            document.getElementById('edit-connector-modal').classList.remove('open');
-            editPlatform = '';
-        }
-
-        function _gatherEditCredentials() {
-            const def = platformDefs.find(p => p.platform === editPlatform);
-            if (!def) return null;
-            const credentials = {};
-            def.fields.forEach(f => {
-                const val = document.getElementById(`edit-cred-${f.key}`)?.value?.trim() || '';
-                if (val) credentials[f.key] = val;
-            });
-            return credentials;
-        }
-
-        async function testEditConnector() {
-            const credentials = _gatherEditCredentials();
-            if (!credentials) return;
-            const resultDiv = document.getElementById('edit-modal-test-result');
-            resultDiv.innerHTML = '<span class="spinner"></span> Testing...';
-            try {
-                const res = await fetch(`${API}/api/connectors/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ platform: editPlatform, credentials, test_connection: true }),
-                });
-                const result = await res.json();
-                if (res.ok && result.status === 'registered') {
-                    resultDiv.innerHTML = `<div class="test-result success">&#x2705; OK — ${result.test_result?.companies_found || 0} companies (${result.test_result?.latency_ms || 0}ms)</div>`;
-                } else {
-                    const err = result.test_result?.error || result.detail || 'Test failed';
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(err)}</div>`;
-                }
-            } catch(e) {
-                resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(e.message)}</div>`;
-            }
-        }
-
-        async function saveEditConnector() {
-            const credentials = _gatherEditCredentials();
-            if (!credentials) return;
-            const enabled = document.getElementById('edit-modal-enabled').value === 'true';
-            const resultDiv = document.getElementById('edit-modal-test-result');
-            const saveBtn = document.getElementById('edit-modal-save-btn');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
-
-            try {
-                const res = await fetch(`${API}/api/connectors/configs/${editPlatform}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ credentials, enabled }),
-                });
-                const result = await res.json();
-                if (res.ok) {
-                    resultDiv.innerHTML = `<div class="test-result success">&#x2705; Saved successfully.</div>`;
-                    addLog('success', `${editPlatform}: configuration updated`);
-                    setTimeout(() => { closeEditModal(); refreshAll(); }, 1000);
-                } else {
-                    resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(result.detail || 'Save failed')}</div>`;
-                }
-            } catch(e) {
-                resultDiv.innerHTML = `<div class="test-result error">&#x274C; ${escapeHtml(e.message)}</div>`;
-            }
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = 'Save Changes';
-        }
 
         // --- RECONCILED BREAKDOWN (Matched / Mismatched per Company) ---
         let allBreakdown = [];
@@ -3450,6 +3119,185 @@
             }
         }
 
+        // --- MATCH COMPANIES ---
+        // Every tool spells clients its own way. The server links the clear cases itself (and says why);
+        // this tab asks a person about the rest, one click each, and remembers the answer.
+        const TOOL_NAMES = { connectwise_psa: 'PSA', asio: 'Asio', sentinelone: 'SentinelOne',
+                             screenconnect: 'ScreenConnect', eset: 'ESET', avast: 'Avast' };
+        let _matching = null;
+
+        function toolChips(platforms) {
+            return (platforms || []).map(p => `<span class="tool-chip">${escapeHtml(TOOL_NAMES[p] || p)}</span>`).join(' ');
+        }
+        function escapeAttr(text) {
+            return escapeHtml(String(text ?? '')).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function titleCase(name) {
+            return String(name || '').replace(/\b\w/g, c => c.toUpperCase());
+        }
+        function matchingIntroDismissed() {
+            try { return localStorage.getItem('matching-intro-dismissed') === '1'; } catch { return false; }
+        }
+        function dismissMatchingIntro() {
+            try { localStorage.setItem('matching-intro-dismissed', '1'); } catch {}
+            document.getElementById('matching-intro').innerHTML = '';
+        }
+        // First run (until "I'll do this later"): open this tab when there's nothing synced yet or names to answer.
+        function _matchingShouldOpen() {
+            if (!_matching || matchingIntroDismissed()) return false;
+            return !_matching.has_data || (_matching.counts.review + _matching.counts.unmatched) > 0;
+        }
+
+        async function loadMatching() {
+            const hadData = _matching ? _matching.has_data : null;
+            try {
+                const res = await fetch(`${API}/api/companies/matching`);
+                if (res.status === 404) {  // MSP pack off: no tab
+                    document.getElementById('matching-tab-btn').style.display = 'none';
+                    return;
+                }
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                _matching = await res.json();
+            } catch (e) {
+                document.getElementById('matching-body').innerHTML =
+                    `<div class="empty-state"><p style="color:var(--red)">Couldn't load company matching: ${escapeHtml(e.message)}</p></div>`;
+                return;
+            }
+            renderMatching();
+            // The very first sync just finished: show what it found.
+            if (hadData === false && _matching.has_data && _matchingShouldOpen()) setTimeout(() => switchTab('matching'), 0);
+        }
+
+        function renderMatching() {
+            const d = _matching, c = d.counts;
+            const pending = c.review + c.unmatched;
+            document.getElementById('matching-count').innerHTML = pending ? `<span class="tab-count">${pending}</span>` : '';
+            document.getElementById('matching-company-list').innerHTML = d.companies.map(co =>
+                `<option value="${escapeAttr(co.name)}">${escapeHtml((co.platforms || []).map(p => TOOL_NAMES[p] || p).join(', '))} · ${co.devices} devices</option>`).join('');
+
+            const intro = document.getElementById('matching-intro');
+            if (!d.has_data) {
+                intro.innerHTML = `<div class="intro-banner"><div style="flex:1">
+                    <h3>Let's line up your companies</h3>
+                    <p>Every tool spells your clients its own way: a short code in one, a name cut off at 30 characters in another.
+                    Run the first sync and this page links the obvious ones for you, says why, and asks about the rest.</p></div>
+                    <button class="btn btn-primary" onclick="triggerReconciliation()">&#x25B6; Run first sync</button></div>`;
+                document.getElementById('matching-summary').innerHTML = '';
+                document.getElementById('matching-body').innerHTML = '';
+                return;
+            }
+            intro.innerHTML = (pending && !matchingIntroDismissed()) ? `<div class="intro-banner"><div style="flex:1">
+                    <h3>Let's line up your companies</h3>
+                    <p>We linked <b>${c.auto}</b> company names across your tools automatically. Each one says why, and any of them can be undone.
+                    <b>${pending}</b> ${pending === 1 ? 'name needs' : 'names need'} a quick answer from you. Answers are saved and never asked again.</p></div>
+                    <button class="btn btn-quiet" onclick="dismissMatchingIntro()">I'll do this later</button></div>` : '';
+
+            document.getElementById('matching-summary').innerHTML = `
+                <div class="stat-card"><div class="label">Linked automatically</div><div class="value" style="color:var(--green)">${c.auto}</div></div>
+                <div class="stat-card"><div class="label">Linked by people</div><div class="value">${c.manual}</div></div>
+                <div class="stat-card"><div class="label">Need an answer</div><div class="value" style="color:${pending ? 'var(--yellow)' : 'var(--green)'}">${pending}</div></div>
+                <div class="stat-card"><div class="label">Not managed clients</div><div class="value">${c.not_managed}</div></div>`;
+
+            let html = '';
+            if (d.review.length) {
+                html += `<div class="match-section"><h3>Is this the same client?</h3>
+                    <div class="hint">There's some evidence, but not enough to be sure. Your answer is remembered.</div>`;
+                d.review.forEach((s, i) => {
+                    html += `<div class="match-card" id="match-review-${i}">
+                        <div class="match-names">${escapeHtml(titleCase(s.name))} ${toolChips(s.name_platforms)}
+                            <span class="match-arrow">&rarr;</span> ${escapeHtml(titleCase(s.target))} ${toolChips(s.target_platforms)}
+                            <span class="score">${s.score}% sure</span></div>
+                        <div class="match-reason">${escapeHtml(s.reason)}</div>
+                        <div class="match-actions">
+                            <button class="btn btn-good" onclick="matchReview(${i}, 'link')">&#x2714; Same client</button>
+                            <button class="btn" onclick="matchReview(${i}, 'different')">&#x2716; Not the same</button>
+                            <input list="matching-company-list" id="match-review-pick-${i}" placeholder="...or pick the right company">
+                            <button class="btn" onclick="matchReview(${i}, 'pick')">Link to picked</button>
+                            <button class="btn btn-quiet" onclick="matchReview(${i}, 'not-managed')">Not a managed client</button>
+                        </div></div>`;
+                });
+                html += '</div>';
+            }
+            if (d.unmatched.length) {
+                html += `<div class="match-section"><h3>Only found in one tool</h3>
+                    <div class="hint">Nothing links these to another company. Pick the client each one belongs to, or mark it as not a
+                    managed client (contacts, one-off jobs) so it stops counting as unmatched.</div><table><thead><tr>
+                    <th>Name</th><th>Tool</th><th>Devices</th><th>Belongs to</th><th></th></tr></thead><tbody>`;
+                d.unmatched.forEach((u, i) => {
+                    html += `<tr id="match-unmatched-${i}"><td>${escapeHtml(titleCase(u.name))}</td><td>${toolChips(u.platforms)}</td><td>${u.devices}</td>
+                        <td><div class="match-actions"><input list="matching-company-list" id="match-unmatched-pick-${i}" placeholder="Type to search companies">
+                            <button class="btn btn-good" onclick="matchUnmatched(${i}, 'link')">Link</button></div></td>
+                        <td><button class="btn btn-quiet" style="padding:5px 12px;font-size:0.8rem" onclick="matchUnmatched(${i}, 'not-managed')">Not a managed client</button></td></tr>`;
+                });
+                html += '</tbody></table></div>';
+            }
+            if (!pending) {
+                html += `<div class="empty-state" style="padding:30px 20px"><h3 style="color:var(--green)">&#x2714; Every company name is accounted for</h3>
+                    <p>New names are checked on every sync. Anything unclear shows up here.</p></div>`;
+            }
+            const auto = d.links.filter(l => l.source === 'auto'), manual = d.links.filter(l => l.source !== 'auto');
+            const linkRows = rows => rows.map(l => `<tr><td>${escapeHtml(titleCase(l.name))}</td><td class="match-arrow">&rarr;</td>
+                <td>${escapeHtml(titleCase(l.target))}</td><td style="color:var(--muted);font-size:0.8rem">${escapeHtml(l.reason || '')}</td>
+                <td style="text-align:right"><button class="btn btn-quiet" style="padding:3px 10px;font-size:0.75rem" data-name="${escapeAttr(l.name)}" onclick="matchUnlink(this.dataset.name)">Undo</button></td></tr>`).join('');
+            if (auto.length) html += `<details class="match-list match-section"><summary>Linked automatically (${auto.length})</summary>
+                <table><tbody>${linkRows(auto)}</tbody></table></details>`;
+            if (manual.length) html += `<details class="match-list match-section"><summary>Linked by people (${manual.length})</summary>
+                <table><tbody>${linkRows(manual)}</tbody></table></details>`;
+            if (d.not_managed.length) html += `<details class="match-list match-section"><summary>Not managed clients (${d.not_managed.length})</summary>
+                <table><tbody>${d.not_managed.map(n => `<tr><td>${escapeHtml(titleCase(n))}</td>
+                <td style="text-align:right"><button class="btn btn-quiet" style="padding:3px 10px;font-size:0.75rem" data-name="${escapeAttr(n)}" onclick="matchRestore(this.dataset.name)">Ask again</button></td></tr>`).join('')}</tbody></table></details>`;
+            document.getElementById('matching-body').innerHTML = html;
+        }
+
+        async function matchPost(path, body, doneMsg, rowId) {
+            const row = rowId && document.getElementById(rowId);
+            if (row) row.classList.add('done');
+            try {
+                const res = await fetch(`${API}/api/companies/matching/${path}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+                addLog('success', doneMsg);
+            } catch (e) {
+                if (row) row.classList.remove('done');
+                addLog('error', `Company matching: ${e.message}`);
+                alert(e.message);
+                return;
+            }
+            await loadMatching();
+            loadStats();
+        }
+
+        function matchReview(i, action) {
+            const s = _matching.review[i], rowId = `match-review-${i}`;
+            if (action === 'link') return matchPost('link', { name: s.name, target: s.target, reason: s.reason },
+                `Linked "${s.name}" to "${s.target}"`, rowId);
+            if (action === 'different') return matchPost('different', { name: s.name, target: s.target },
+                `"${s.name}" and "${s.target}" are different clients`, rowId);
+            if (action === 'not-managed') return matchPost('not-managed', { name: s.name },
+                `"${s.name}" marked as not a managed client`, rowId);
+            const target = document.getElementById(`match-review-pick-${i}`).value.trim();
+            if (!target) { alert('Pick a company first'); return; }
+            return matchPost('link', { name: s.name, target }, `Linked "${s.name}" to "${target}"`, rowId);
+        }
+
+        function matchUnmatched(i, action) {
+            const u = _matching.unmatched[i], rowId = `match-unmatched-${i}`;
+            if (action === 'not-managed') return matchPost('not-managed', { name: u.name },
+                `"${u.name}" marked as not a managed client`, rowId);
+            const target = document.getElementById(`match-unmatched-pick-${i}`).value.trim();
+            if (!target) { alert('Type or pick the company it belongs to'); return; }
+            return matchPost('link', { name: u.name, target }, `Linked "${u.name}" to "${target}"`, rowId);
+        }
+
+        function matchUnlink(name) {
+            if (!confirm(`Undo the link for "${name}"? It will show up as its own company again.`)) return;
+            return matchPost('unlink', { name }, `Removed the link for "${name}"`);
+        }
+        function matchRestore(name) {
+            return matchPost('restore', { name }, `"${name}" will be checked again`);
+        }
+
         // --- COMPANY ALIASES ---
         async function loadAliases() {
             const container = document.getElementById('aliases-section');
@@ -3768,7 +3616,7 @@
         }
 
         async function refreshAll() {
-            await Promise.all([loadStats(), loadRuns(), loadCompanies(), loadDevices(), loadConnectors(), loadOverrides(), loadAliases()]);
+            await Promise.all([loadStats(), loadRuns(), loadCompanies(), loadDevices(), loadConnectors(), loadOverrides(), loadAliases(), loadMatching()]);
         }
 
         // ---- Remediation functions ----
@@ -4457,8 +4305,19 @@
         }
 
         // Init
-        loadPlatformDefs();
-        refreshAll();
+        refreshAll().then(() => {
+            if (location.hash === '#matching' || _matchingShouldOpen()) switchTab('matching');
+        });
+        // New install: until tools are connected and synced, point admins at the Get started wizard.
+        fetch(`${API}/api/admin/getting-started`).then(r => r.ok ? r.json() : null).then(gs => {
+            if (!gs || !gs.msp || !['tools', 'sync'].includes(gs.step)) return;
+            const banner = document.createElement('div');
+            banner.className = 'intro-banner';
+            banner.innerHTML = `<div style="flex:1"><h3>Finish getting started</h3>
+                <p>${gs.step === 'tools' ? 'Connect your PSA, Asio, ScreenConnect and security tools' : 'Run the first sync'} to fill this dashboard.</p></div>
+                <a class="btn btn-primary" style="text-decoration:none" href="/setup?step=${gs.step}">Continue setup</a>`;
+            document.getElementById('stats').before(banner);
+        }).catch(() => {});
     </script>
 </body>
 </html>

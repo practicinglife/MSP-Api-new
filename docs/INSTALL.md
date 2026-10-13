@@ -55,24 +55,37 @@ After editing `.env`, run `docker compose up -d` to restart.
 **Single sign-on (optional).** Register an app with your identity provider:
 - **Redirect URI:** `https://tools.example.com/auth/callback`
 - **Microsoft 365 / Entra ID:** set `MSP_ENTRA_TENANT_ID`, `MSP_ENTRA_CLIENT_ID` and `MSP_ENTRA_CLIENT_SECRET`.
-  Create app roles `MSPTools.User`, `MSPTools.Editor`, `MSPTools.Approver` and `MSPTools.Admin`, and assign them.
+  Create app roles with the values `Reader`, `Editor`, `Approver` and `Admin`, and assign them. (Older `MSPTools.User` /
+  `.Editor` / `.Approver` / `.Admin` roles keep working.) Or do all of this in **Get started → Secure it**.
 - **Any other OpenID Connect provider:** set `MSP_OIDC_ISSUER`, `MSP_OIDC_CLIENT_ID` and `MSP_OIDC_CLIENT_SECRET`.
   `MSP_OIDC_ROLES_CLAIM` names the claim that carries roles or groups. `MSP_OIDC_ROLE_MAP` maps your group names
-  to the roles, e.g. `{"it-admins": "MSPTools.Admin"}`.
+  to the roles, e.g. `{"it-admins": "Admin", "helpdesk": "Reader"}`.
 - Keep one local admin account as a break-glass login.
 
 **Roles.**
 
-| Role | Can |
-|---|---|
-| User | read and search, call read operations, propose changes |
-| Editor | also call write operations where the write mode allows, and submit change requests |
-| Approver | also give final approval, and manage connections and their credentials |
-| Admin | also manage keys, write modes and the audit log |
+Four roles; each includes everything the one before it can do. An Editor submits, an Approver approves: every
+approval-mode write needs two people. This is exactly what the app enforces
+(`app/auth/principal.py` `ACCESS`, checked by `tests/test_roles.py`), and **Get started → Secure it** shows it:
+
+| Access | Reader | Editor | Approver | Admin |
+|---|---|---|---|---|
+| Sign in, search and list connections and their operations | ✓ | ✓ | ✓ | ✓ |
+| Call read-only API operations (and read local copies) on the connections they may use | ✓ | ✓ | ✓ | ✓ |
+| Propose a write: it becomes a change request and runs only once approved | ✓ | ✓ | ✓ | ✓ |
+| Call write API operations, on connections whose write mode is `direct` | | ✓ | ✓ | ✓ |
+| Submit change requests for approval (approval-mode writes) | | ✓ | ✓ | ✓ |
+| Give final approval to change requests (or reject them) | | | ✓ | ✓ |
+| Add, edit and delete connections, credentials, built-in integrations and local copies | | | ✓ | ✓ |
+| Set write modes; export and import connection settings | | | ✓ | ✓ |
+| Users, connection keys, sign-in, certificates, packs, setup and the audit log | | | | ✓ |
+
+Every new connection starts read-only: nobody, not even an Admin, can write through it until an Approver sets its
+write mode. Connection keys are Reader or Editor (never Approver or Admin) and are limited further by their scopes.
 
 **Connection keys** (for AI clients and scripts):
 ```bash
-docker compose exec app python -m app.cli create-key "Pat - laptop" --role user --scope "*:read" --expires-days 365
+docker compose exec app python -m app.cli create-key "Pat - laptop" --role reader --scope "*:read" --expires-days 365
 ```
 Scope a key to the APIs it needs (`petstore:read`, `jira:write` …). Keys are shown once and stored only as a
 hash.

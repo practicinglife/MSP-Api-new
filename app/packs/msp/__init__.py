@@ -30,7 +30,7 @@ NAV = [{"href": "/", "label": "MSP dashboard"}, {"href": "/library", "label": "W
 
 # (module, attribute) of every router the pack adds, in the order they were always included.
 _ROUTERS = [
-    ("app.api.companies", "router"), ("app.api.devices", "router"), ("app.api.overrides", "router"),
+    ("app.api.company_matching", "router"), ("app.api.companies", "router"), ("app.api.devices", "router"), ("app.api.overrides", "router"),
     ("app.api.runs", "router"), ("app.api.connector_health", "router"), ("app.api.gap_analysis", "router"),
     ("app.api.gap_analysis", "gap_analysis_router"), ("app.api.db_query", "router"),
     ("app.api.actions", "router"), ("app.api.api_discovery", "router"),
@@ -72,34 +72,35 @@ def default_connectors() -> list[Any]:
 
 async def startup(app: FastAPI) -> None:
     from app.api.connector_health import register_connectors
-    from app.db.repository import ConnectorConfigRepository, get_session_factory
     from app.org_profile import missing_msp_settings
-    from app.services.connector_registry import build_connector
+    from app.services import builtin_integrations as builtins
 
     if missing := missing_msp_settings():
         log.warning("org_profile.msp_settings_missing", missing=missing,
                     hint="MSP features that depend on these are off until they are set in .env")
 
-    # Connectors from .env, overridden by credentials saved in the database
+    # Built-in tools are connections (kind "builtin"): tools set in .env or the old connector_configs table get
+    # a row once, then the live connectors are built from the rows (saved credentials first, then .env).
     connectors = default_connectors()
     try:
-        async with get_session_factory()() as session:
-            saved = await ConnectorConfigRepository(session).list_all()
-        from_db: set[str] = set()
-        for cfg in saved:
-            if not cfg.enabled:
-                continue
-            try:
-                connector = build_connector(cfg.platform, cfg.credentials)
-                connectors = [c for c in connectors if c.platform_name != cfg.platform] + [connector]
-                from_db.add(cfg.platform)
-                log.info("connector.loaded_from_db", platform=cfg.platform)
-            except Exception as exc:  # noqa: BLE001
-                log.warning("connector.db_load_failed", platform=cfg.platform, error=str(exc))
-        log.info("connectors.ready", total=len(connectors), from_db=len(from_db))
-    except Exception as exc:  # noqa: BLE001
+        await builtins.adopt_existing()
+        connectors = await builtins.load_live_connectors()
+        log.info("connectors.ready", total=len(connectors), platforms=sorted(c.platform_name for c in connectors))
+    except Exception as exc:  # noqa: BLE001 — fall back to .env only
         log.warning("connectors.db_load_error", error=str(exc))
     register_connectors(connectors)
+    try:  # each built-in's operations (from the vendor's API definition), without delaying startup
+        from sqlalchemy import select
+
+        from app.db.repository import get_session_factory
+        from app.db.schema import Connection
+
+        async with get_session_factory()() as db:
+            pending = [r.slug for r in (await db.execute(select(Connection).where(
+                Connection.kind == builtins.KIND, Connection.operation_count == 0))).scalars()]
+        builtins.import_in_background(pending)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("builtin.operations_schedule_failed", error=str(exc))
 
     # The API explorer starts with this app's own endpoints
     try:

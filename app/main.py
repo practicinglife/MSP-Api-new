@@ -28,7 +28,7 @@ async def _security_startup_checks() -> None:
     """Encrypt any plaintext stored credentials and warn loudly about missing security configuration."""
     from app.api.setup import needs_setup, setup_code
     from app.auth.crypto import master_key_configured, reencrypt_plaintext_rows
-    from app.org_profile import EXTERNAL_BASE_URL
+    from app.org_profile import external_base_url
 
     if master_key_configured():
         try:
@@ -48,7 +48,7 @@ async def _security_startup_checks() -> None:
         code = setup_code()
         log.warning("security.no_sign_in_method",
                     hint="Nobody can sign in yet. Open /setup on this server from your network"
-                         + (f" (e.g. {EXTERNAL_BASE_URL}/setup) and enter setup code {code}" if code else
+                         + (f" (e.g. {external_base_url()}/setup) and enter setup code {code}" if code else
                             " after setting MSP_MASTER_KEY")
                          + ", or run `python -m app.cli create-user admin --role admin`")
 
@@ -91,6 +91,9 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 def create_app(enabled_packs: list[str] | None = None) -> FastAPI:
     """Build the app with the core plus ``enabled_packs`` (default: ``MSP_PACKS``)."""
+    from app import runtime
+
+    runtime.apply_settings()  # address and sign-in chosen in Get started, where .env didn't set them
     active = packs.configured() if enabled_packs is None else [p for p in enabled_packs if p in packs.AVAILABLE]
     packs.set_active(active)
 
@@ -112,11 +115,13 @@ def create_app(enabled_packs: list[str] | None = None) -> FastAPI:
     from app.api.auth_local import router as auth_local_router
     from app.api.auth_m365 import router as auth_m365_router
     from app.api.changes import router as changes_router
+    from app.api.connection_settings import router as connection_settings_router
     from app.api.connections import router as connections_router
     from app.api.connections import search_router as connections_search_router
     from app.api.external_auth import router as external_auth_router
     from app.api.mcp_servers import router as mcp_servers_router
     from app.api.setup import router as setup_router
+    from app.api.secure_setup import router as secure_setup_router
 
     # Sign-in (OIDC / Microsoft 365 + local accounts), connection keys + OAuth for MCP clients, security admin
     application.include_router(auth_m365_router)
@@ -124,12 +129,14 @@ def create_app(enabled_packs: list[str] | None = None) -> FastAPI:
     application.include_router(external_auth_router)
     application.include_router(admin_security_router)
     application.include_router(setup_router)
+    application.include_router(secure_setup_router)  # Get started → Secure it (Admin)
     # Any-API connections (OpenAPI, Postman, cURL, SOAP, GraphQL, OData, SQL, MongoDB, MCP), search, local copy
     application.include_router(connections_router)
     application.include_router(connections_search_router)
+    application.include_router(connection_settings_router)  # export / import (Approver)
     # Each connection as its own MCP server (/mcp/{slug}), hand-picked groups, and the hub (/mcp)
     application.include_router(mcp_servers_router)
-    # Change requests: approval-mode writes (propose → Editor submit → Approver final approval)
+    # Change requests: approval-mode writes (anyone proposes → an Editor submits, an Approver approves)
     application.include_router(changes_router)
 
     @application.get("/connections", tags=["dashboard"], include_in_schema=False)

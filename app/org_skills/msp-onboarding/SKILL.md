@@ -21,7 +21,7 @@ Load `msp-api` and `msp-changes` first. The fastest way for people is the form a
    - Prices: catalog by default, any line can be changed (`prices: {workstations: 22.5, eset: 3.5}`); agreement
      start (default first of next month)
 3. **Read it back** in a short table and get a yes.
-4. `propose_change("onboard_client", {...})` and hand over the approval link (Editor submits → an Approver approves).
+4. `propose_change("onboard_client", {...})` and hand over the approval link (an Editor submits, an Approver approves).
 
 What it creates: PSA company (name = legal name, Company ID = code, Main site), main contact as default contact,
 agreement `<CODE> - <MSP_PSA_AGREEMENT_LABEL>` (type MSP_PSA_AGREEMENT_TYPE_ID) with an addition per line, the registry client, a SentinelOne

@@ -31,17 +31,16 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
-from app.auth.principal import ROLE_EDITOR, ROLE_USER, Principal, get_current, scopes_for_roles
+from app.auth.principal import ROLE_EDITOR, ROLE_READER, Principal, get_current, scopes_for_roles
 from app.db.repository import get_session_factory
 from app.db.schema import ApiKey, OAuthClient, OAuthToken
 from app.mcp.protocol import MCP_PATH_RE
-from app.org_profile import EXTERNAL_BASE_URL
+from app.org_profile import external_base_url
 
 log = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["admin"])
 
-EXTERNAL_BASE = EXTERNAL_BASE_URL
 EDGE_HEADER = "x-msp-edge"
 KEY_PREFIX = "msp_"
 ACCESS_TTL = timedelta(hours=1)
@@ -104,7 +103,7 @@ def unauthorized_response() -> JSONResponse:
         {"error": "invalid_token", "error_description": "Connection key or OAuth token required"},
         status_code=401,
         headers={
-            "WWW-Authenticate": f'Bearer resource_metadata="{EXTERNAL_BASE}/.well-known/oauth-protected-resource"'
+            "WWW-Authenticate": f'Bearer resource_metadata="{external_base_url()}/.well-known/oauth-protected-resource"'
         },
     )
 
@@ -121,7 +120,7 @@ async def _key_by_secret(session: Any, secret: str) -> ApiKey | None:
 
 
 def _key_roles(key: ApiKey) -> frozenset[str]:
-    return frozenset(key.roles or [ROLE_USER])
+    return frozenset(key.roles or [ROLE_READER])  # normalised (older names too) by Principal
 
 
 def _key_scopes(key: ApiKey) -> frozenset[str]:
@@ -132,13 +131,13 @@ MCP_RESOURCE_PATHS = MCP_PATH_RE  # /msp/mcp, /mcp (hub), /mcp/{connection}, /mc
 
 
 def default_resource() -> str:
-    return f"{EXTERNAL_BASE}/msp/mcp"
+    return f"{external_base_url()}/msp/mcp"
 
 
 def resource_allowed(resource: str) -> bool:
     """An OAuth ``resource`` must be one of this server's MCP endpoints."""
     parsed = urlparse(resource or "")
-    base = urlparse(EXTERNAL_BASE)
+    base = urlparse(external_base_url())
     return (parsed.scheme, parsed.netloc) == (base.scheme, base.netloc) \
         and bool(MCP_RESOURCE_PATHS.match(parsed.path.rstrip("/"))) and not parsed.query and not parsed.fragment
 
@@ -186,7 +185,7 @@ async def authenticate(request: Request) -> str | None:
 def _protected_resource(resource: str | None = None) -> dict[str, Any]:
     return {
         "resource": resource or default_resource(),
-        "authorization_servers": [EXTERNAL_BASE],
+        "authorization_servers": [external_base_url()],
         "bearer_methods_supported": ["header"],
         "scopes_supported": ["mcp"],
         "resource_name": "API Tools",
@@ -204,16 +203,16 @@ async def protected_resource_mcp(path: str) -> dict[str, Any]:
     path = "/" + path.strip("/")
     if not MCP_RESOURCE_PATHS.match(path):
         raise HTTPException(404, "Not an MCP server on this host")
-    return _protected_resource(f"{EXTERNAL_BASE}{path}")
+    return _protected_resource(f"{external_base_url()}{path}")
 
 
 @router.get("/.well-known/oauth-authorization-server")
 async def authorization_server_metadata() -> dict[str, Any]:
     return {
-        "issuer": EXTERNAL_BASE,
-        "authorization_endpoint": f"{EXTERNAL_BASE}/oauth/authorize",
-        "token_endpoint": f"{EXTERNAL_BASE}/oauth/token",
-        "registration_endpoint": f"{EXTERNAL_BASE}/oauth/register",
+        "issuer": external_base_url(),
+        "authorization_endpoint": f"{external_base_url()}/oauth/authorize",
+        "token_endpoint": f"{external_base_url()}/oauth/token",
+        "registration_endpoint": f"{external_base_url()}/oauth/register",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "code_challenge_methods_supported": ["S256"],
@@ -476,7 +475,7 @@ _SCOPE_RE = re.compile(r"^(\*|[a-z0-9_\-]{1,64}):(read|write)$")
 
 class KeyCreate(BaseModel):
     name: str
-    role: str = "user"  # user | editor — keys never get Approver/Admin (approvals need a person)
+    role: str = "reader"  # reader | editor — never Approver/Admin: approvals need a person (older: user → reader)
     scopes: list[str] = ["*:read"]
     expires_days: int | None = None
 
@@ -499,18 +498,19 @@ async def _admin(request: Request) -> str:
 async def create_key(request: Request, body: KeyCreate) -> dict[str, Any]:
     """Create a connection key. The full key is shown ONCE — store it in a password manager."""
     actor = await _admin(request)
-    if body.role not in ("user", "editor"):
-        raise HTTPException(400, "role must be 'user' or 'editor'")
+    role = {"user": "reader"}.get(body.role.strip().lower(), body.role.strip().lower())
+    if role not in ("reader", "editor"):
+        raise HTTPException(400, "role must be 'reader' or 'editor' (keys are never Approver or Admin)")
     scopes = sorted({s.strip().lower() for s in body.scopes if s.strip()})
     bad = [s for s in scopes if not _SCOPE_RE.match(s)]
     if bad or not scopes:
         raise HTTPException(400, f"Invalid scopes {bad or '[]'} — use '<platform|*>:<read|write>'")
-    if body.role == "user" and any(s.endswith(":write") for s in scopes):
+    if role == "reader" and any(s.endswith(":write") for s in scopes):
         raise HTTPException(400, "Write scopes need role 'editor'")
     if body.expires_days is not None and not 1 <= body.expires_days <= 730:
         raise HTTPException(400, "expires_days must be between 1 and 730")
     secret = KEY_PREFIX + secrets.token_urlsafe(32)
-    roles = [ROLE_USER] + ([ROLE_EDITOR] if body.role == "editor" else [])
+    roles = [ROLE_EDITOR if role == "editor" else ROLE_READER]
     key = ApiKey(id=str(uuid4()), name=body.name.strip()[:255] or "unnamed", prefix=secret[:10],
                  key_hash=_hash(secret), revoked=False, created_at=_now(), roles=roles, scopes=scopes,
                  expires_at=_now() + timedelta(days=body.expires_days) if body.expires_days else None,

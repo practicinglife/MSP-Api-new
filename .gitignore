@@ -63,3 +63,9 @@ tools/__gen_smoke.cjs
 # Empty scratch files and per-machine Claude Code settings
 tools/__*
 .claude/settings.local.json
+
+# Local HTTPS certificates (python -m app.cli make-certs)
+certs/
+# Local run data: SQLite database + generated encryption key (python -m app.cli run)
+data/
+data.*/

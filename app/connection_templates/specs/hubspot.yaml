@@ -1,0 +1,189 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: HubSpot CRM API
+  version: starter
+  description: 'Starter definition: companies, contacts, deals and tickets (CRM v3
+    objects). Made for API Tools connection templates; re-import a fuller definition
+    if the vendor publishes one.'
+paths:
+  /crm/v3/objects/companies:
+    get:
+      operationId: listCompanies
+      summary: List companies
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (max 100)
+        schema:
+          type: integer
+      - name: after
+        in: query
+        required: false
+        description: Paging cursor
+        schema:
+          type: string
+      - name: properties
+        in: query
+        required: false
+        description: Properties to return, comma separated
+        schema:
+          type: string
+      - name: archived
+        in: query
+        required: false
+        description: Archived records
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+  /crm/v3/objects/contacts:
+    get:
+      operationId: listContacts
+      summary: List contacts
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (max 100)
+        schema:
+          type: integer
+      - name: after
+        in: query
+        required: false
+        description: Paging cursor
+        schema:
+          type: string
+      - name: properties
+        in: query
+        required: false
+        description: Properties to return, comma separated
+        schema:
+          type: string
+      - name: archived
+        in: query
+        required: false
+        description: Archived records
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+  /crm/v3/objects/deals:
+    get:
+      operationId: listDeals
+      summary: List deals
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (max 100)
+        schema:
+          type: integer
+      - name: after
+        in: query
+        required: false
+        description: Paging cursor
+        schema:
+          type: string
+      - name: properties
+        in: query
+        required: false
+        description: Properties to return, comma separated
+        schema:
+          type: string
+      - name: archived
+        in: query
+        required: false
+        description: Archived records
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+  /crm/v3/objects/tickets:
+    get:
+      operationId: listTickets
+      summary: List tickets
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (max 100)
+        schema:
+          type: integer
+      - name: after
+        in: query
+        required: false
+        description: Paging cursor
+        schema:
+          type: string
+      - name: properties
+        in: query
+        required: false
+        description: Properties to return, comma separated
+        schema:
+          type: string
+      - name: archived
+        in: query
+        required: false
+        description: Archived records
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+  /crm/v3/objects/{objectType}/{objectId}:
+    get:
+      operationId: getObject
+      summary: Get one record
+      parameters:
+      - name: objectType
+        in: path
+        required: true
+        description: companies, contacts, deals or tickets
+        schema:
+          type: string
+      - name: objectId
+        in: path
+        required: true
+        description: Record ID
+        schema:
+          type: string
+      - name: properties
+        in: query
+        required: false
+        description: Properties, comma separated
+        schema:
+          type: string
+      - name: associations
+        in: query
+        required: false
+        description: Associated object types, comma separated
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /crm/v3/owners:
+    get:
+      operationId: listOwners
+      summary: List owners
+      parameters:
+      - name: email
+        in: query
+        required: false
+        description: Owner email
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Results per page
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK

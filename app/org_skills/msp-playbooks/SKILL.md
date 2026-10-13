@@ -7,7 +7,7 @@ description: Multi-step MSP playbooks that bundle several vendor changes into on
 
 Load `msp-api` and `msp-changes` first. A playbook is proposed like any command
 (`propose_change("playbook:<name>", params)`) and produces **one** change with several steps, approved
-once (Editor submits → the Approver's final approval).
+once (an Editor submits, an Approver approves).
 
 | Playbook | Params | What it does |
 |---|---|---|

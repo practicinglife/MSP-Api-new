@@ -42,6 +42,10 @@ pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;fon
 .tabs{display:flex;gap:4px;margin:6px 0} .tabs button{padding:5px 12px;font-size:13px}
 .tabs button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .sticky{position:sticky;top:12px}
+.role{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+.tile{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)}
+.tile:hover{background:var(--hover)} .tile .t{font-weight:600}
+.b.on{color:var(--ok);border-color:var(--ok)} .b.env{color:var(--warn);border-color:var(--warn)}
 </style>
 </head>
 <body>
@@ -62,13 +66,23 @@ pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;fon
 
   <div class="layout">
     <section>
+      <div class="card hidden" id="builtin-card">
+        <h2>Built-in integrations</h2>
+        <div class="m">Ready-made connections for your MSP tools. Enter credentials once: they are stored encrypted, every
+          operation in the vendor's API becomes a tool, and reconciliation, matching and reports use them.</div>
+        <div id="builtin"></div>
+      </div>
       <div class="card" id="results-card">
         <h2 id="results-title">Connections</h2>
         <div id="results"></div>
       </div>
       <div class="card hidden" id="add-card">
-        <h2>Add a connection</h2>
-        <div class="m">Import a definition: every operation in it becomes a tool. Preview first — nothing is saved until you press Save.</div>
+        <div class="row" style="justify-content:space-between"><h2 style="margin:0">Add a connection</h2>
+          <button class="small" type="button" id="export-btn">Export settings</button></div>
+        <div class="m">Pick a template and type only your key, search the public directory, or set up anything else with Custom.
+          Every endpoint becomes a tool; nothing is saved until you press Save.</div>
+        <div id="picker"></div>
+        <div id="custom-form" class="hidden">
         <label for="a-kind">Kind</label>
         <select id="a-kind"></select>
         <div class="m" id="a-kind-help"></div>
@@ -96,6 +110,7 @@ pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;fon
           <span id="a-status" class="m"></span>
         </div>
         <div id="a-preview-out"></div>
+        </div>
       </div>
     </section>
 
@@ -107,6 +122,7 @@ pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow:auto;fon
   </div>
 </main>
 
+<script src="/static/connection-picker.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -123,7 +139,7 @@ const KIND_HELP = {
   mcp: "Another MCP server: put its URL in Base URL; its tools are served here behind your sign-in and audit.",
 };
 let me = {roles: []}, kinds = {}, connections = [], writeModes = {}, current = null, srcMode = "url";
-const isApprover = () => (me.roles || []).some(r => r === "MSPTools.Approver" || r === "MSPTools.Admin");
+const isApprover = () => (me.roles || []).some(r => r === "Approver" || r === "Admin");
 
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"Content-Type": "application/json", ...(opts.headers || {})}, ...opts});
@@ -154,8 +170,32 @@ async function init() {
   if (isApprover()) {
     $("add-card").classList.remove("hidden");
     try { writeModes = (await api("/api/admin/write-modes")).body.platforms || {}; } catch { writeModes = {}; }
+    $("export-btn").onclick = async () => {
+      const data = (await api("/api/admin/connections/export")).body;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: "application/json"}));
+      a.download = `api-tools-connections-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click(); URL.revokeObjectURL(a.href);
+    };
   }
-  await loadConnections();
+  await Promise.all([loadConnections(), loadBuiltins()]);
+  if (isApprover()) {
+    ConnectionPicker.mount($("picker"), {
+      canImport: true,
+      onCustom: () => $("custom-form").classList.remove("hidden"),
+      onLeaveCustom: () => $("custom-form").classList.add("hidden"),
+      onOpen: (slug) => showConnection(slug).then(revealDetail),
+      // With the MSP pack on, your MSP tools are built-in integrations: open their setup instead of a copy
+      onBuiltin: builtins ? (platform) => { showBuiltin(platform); revealDetail(); } : undefined,
+      onSaved: async (r) => { await loadConnections(); if (r && r.slug) showConnection(r.slug).then(revealDetail); },
+    });
+  }
+  const want = new URLSearchParams(location.search).get("builtin");
+  if (want && builtins) showBuiltin(want);
+  if (location.hash === "#add") {  // "+ Add connection" from the dashboard: built-in tools first, then any API
+    const target = builtins ? $("builtin-card") : $("add-card");
+    target.scrollIntoView({behavior: "smooth", block: "start"});
+  }
 }
 
 // ── MCP client setup ───────────────────────────────────────
@@ -209,7 +249,7 @@ function renderConnections() {
   }
   $("results").innerHTML = connections.map(c => `
     <button class="result" data-conn="${esc(c.slug)}">
-      <div class="row"><span class="t">${esc(c.name)}</span><span class="b kind">${esc(c.kind)}</span>
+      <div class="row"><span class="t">${esc(c.name)}</span><span class="b kind">${esc(c.kind === "builtin" ? "built-in" : c.kind)}</span>
         ${c.enabled ? "" : '<span class="b off">disabled</span>'}
         <span class="m">${c.operations} operations</span></div>
       <div class="d">${esc(c.base_url || c.description || c.slug)}</div>
@@ -217,6 +257,94 @@ function renderConnections() {
       <code>${esc(mcp.hub.url)}</code><button class="small" type="button" id="hub-setup">Set up</button></div>` : "");
   document.querySelectorAll("[data-conn]").forEach(b => b.onclick = () => showConnection(b.dataset.conn).then(revealDetail));
   if (mcp) $("hub-setup").onclick = () => { showHub(); revealDetail(); };
+}
+
+// ── built-in integrations (MSP pack) ───────────────────────
+let builtins = null;
+const ROLE_ORDER = [["management", "Management tools"], ["security", "Security tools"]];
+async function loadBuiltins() {
+  try {
+    const r = await fetch("/api/connectors/catalog");
+    if (!r.ok) { $("builtin-card").classList.add("hidden"); return; }  // pack off
+    builtins = await r.json();
+  } catch { return; }
+  $("builtin-card").classList.remove("hidden");
+  const status = b => !b.enabled && b.credentials_from ? '<span class="b off">off</span>'
+    : b.connected ? `<span class="b on">connected</span>${b.credentials_from === "env" ? ' <span class="b env">from .env</span>' : ""}`
+    : '<span class="b">not connected</span>';
+  $("builtin").innerHTML = ROLE_ORDER.map(([role, title]) => {
+    const items = builtins.filter(b => b.role === role);
+    return items.length ? `<div class="role">${esc(title)}</div><div class="grid">${items.map(b => `
+      <button class="tile" type="button" data-builtin="${esc(b.platform)}">
+        <div class="row"><span class="t">${esc(b.label)}</span>${status(b)}</div>
+        <div class="m">${b.connected ? `${b.operations} operations` : (isApprover() ? "Set up" : "Ask an Approver to set this up")}</div>
+      </button>`).join("")}</div>` : "";
+  }).join("") + `<div class="m" style="margin-top:10px">Any other API: add it as a connection below.</div>`;
+  document.querySelectorAll("[data-builtin]").forEach(b => b.onclick = () => { showBuiltin(b.dataset.builtin); revealDetail(); });
+}
+
+function builtinForm(b, idPrefix) {
+  return b.fields.filter(f => !f.show_when_auth).map(f => {
+    const saved = b.values && b.values[f.key];
+    const secret = f.type === "password";
+    const value = secret ? "" : (saved || f.default || "");
+    const ph = secret ? (b.credentials_from === "app" ? "saved — leave blank to keep" : "") : (f.default || "");
+    return `<label for="${idPrefix}-${esc(f.key)}">${esc(f.label)}${f.required ? "" : " (optional)"}</label>
+      <input id="${idPrefix}-${esc(f.key)}" data-key="${esc(f.key)}" type="${secret ? "password" : "text"}" style="width:100%"
+        value="${esc(value)}" placeholder="${esc(ph)}" autocomplete="off">`;
+  }).join("");
+}
+function readForm(root) {
+  const out = {};
+  root.querySelectorAll("input[data-key]").forEach(i => { if (i.value.trim()) out[i.dataset.key] = i.value.trim(); });
+  return out;
+}
+function testSummary(t) {
+  if (!t) return "";
+  return t.status === "ok" ? `<span class="ok">Connected: ${t.companies_found} ${esc(t.found_label || "companies")} found (${t.latency_ms} ms)</span>`
+    : `<span class="bad">${esc(t.error || t.status)}</span>`;
+}
+
+function showBuiltin(platform) {
+  const b = builtins.find(x => x.platform === platform);
+  if (!b) return;
+  const admin = isApprover();
+  const where = b.credentials_from === "app" ? "Credentials are saved here, encrypted."
+    : b.credentials_from === "env" ? "Connected with credentials from the server's .env file. Save them here to manage them from this page."
+    : "Not connected yet.";
+  $("detail").innerHTML = `<div class="row"><h2 style="margin:0">${esc(b.label)}</h2><span class="b kind">built-in</span>
+      <span class="b">${esc(b.role_label)}</span></div>
+    <div class="m">${esc(where)}</div>
+    ${admin ? `<div id="bi-form">${builtinForm(b, "bi")}</div>
+      <div class="row" style="margin-top:14px">
+        <button id="bi-test" type="button">Test</button>
+        <button id="bi-save" class="primary" type="button">${b.connected ? "Save" : "Connect"}</button>
+        ${b.credentials_from === "app" ? '<button id="bi-forget" class="danger small" type="button">Forget saved credentials</button>' : ""}
+        ${b.connected ? '<button id="bi-ops" class="small" type="button">Operations &amp; AI setup</button>' : ""}
+      </div><div id="bi-out" class="m" style="margin-top:8px"></div>`
+    : `<div class="m">Only Approvers can change integration credentials.</div>
+       ${b.connected ? '<button id="bi-ops" class="small" type="button">Operations &amp; AI setup</button>' : ""}`}`;
+  if ($("bi-ops")) $("bi-ops").onclick = () => showConnection(platform);
+  if (!admin) return;
+  const send = async (save) => {
+    $("bi-out").textContent = save ? "Testing and saving…" : "Testing…";
+    try {
+      const r = (await api("/api/connectors/register", {method: "POST", body: JSON.stringify(
+        {platform, credentials: readForm($("bi-form")), test_connection: true, save})})).body;
+      $("bi-out").innerHTML = testSummary(r.test_result) + (r.saved ? " · <span class='ok'>Saved</span>" : "");
+      if (r.saved) { await loadBuiltins(); await loadConnections(); }
+    } catch (e) { $("bi-out").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  };
+  $("bi-test").onclick = () => send(false);
+  $("bi-save").onclick = () => send(true);
+  if ($("bi-forget")) $("bi-forget").onclick = async () => {
+    if (!confirm(`Forget the saved ${b.label} credentials?`)) return;
+    try {
+      const r = (await api(`/api/connectors/configs/${encodeURIComponent(platform)}`, {method: "DELETE"})).body;
+      $("bi-out").textContent = r.still_connected_from_env ? "Forgotten — still connected using .env" : "Forgotten";
+      await loadBuiltins(); await loadConnections(); showBuiltin(platform);
+    } catch (e) { $("bi-out").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  };
 }
 
 // ── search ─────────────────────────────────────────────────
@@ -263,8 +391,9 @@ async function showConnection(slug) {
   const server = mcp && mcp.servers.find(s => s.connection === slug);
   const connect = server ? connectBlock(server.url, server.configs, false, server.groups) : null;
   $("detail").innerHTML = `
-    <div class="row"><h2 style="margin:0">${esc(c.name)}</h2><span class="b kind">${esc(c.kind)}</span>
-      ${c.enabled ? "" : '<span class="b off">disabled</span>'}</div>
+    <div class="row"><h2 style="margin:0">${esc(c.name)}</h2><span class="b kind">${esc(c.kind === "builtin" ? "built-in" : c.kind)}</span>
+      ${c.enabled ? "" : '<span class="b off">disabled</span>'}
+      ${c.kind === "builtin" && builtins ? '<button class="small" id="c-settings" type="button">Credentials</button>' : ""}</div>
     <div class="m">${esc(c.slug)} · ${esc(c.base_url || "no base URL")} · auth: ${esc(c.auth_type)}
       ${c.secrets_set.length ? "(credentials stored, encrypted)" : ""}</div>
     ${c.description ? `<p>${esc(c.description)}</p>` : ""}
@@ -273,7 +402,9 @@ async function showConnection(slug) {
       <select id="c-mode">${["read_only", "direct", "approval"].map(m => `<option ${m === mode ? "selected" : ""} value="${m}">${m.replace("_", "-")}</option>`).join("")}</select>
       <button class="small" id="c-reimport">Re-import</button>
       <button class="small" id="c-toggle">${c.enabled ? "Disable" : "Enable"}</button>
+      ${c.kind !== "builtin" && c.kind !== "sql" && c.kind !== "mongodb" ? '<button class="small" id="c-creds">Credentials</button>' : ""}
       <button class="small danger" id="c-delete">Delete</button></div>
+      <div id="c-creds-form"></div>
       <div class="m">read-only: writes refused · direct: Editors may write · approval: each write becomes a change request.</div>` :
       `<div class="m">Write mode: ${esc(mode.replace("_", "-"))}</div>`}
     ${server ? connect.html : ""}
@@ -282,6 +413,7 @@ async function showConnection(slug) {
     <div class="m">Pinned operations (★) are also tools of their own on this connection's MCP server.</div>
     <div>${ops.operations.map(o => opRow({...o, connection: slug, connection_name: c.name})).join("")}</div>`;
   bindOps();
+  if ($("c-settings")) $("c-settings").onclick = () => showBuiltin(slug);
   if (server) connect.bind($("detail"));
   renderConnLocal(slug);
   if (admin) {
@@ -298,6 +430,7 @@ async function showConnection(slug) {
       await api(`/api/connections/${encodeURIComponent(slug)}`, {method: "PATCH", body: JSON.stringify({enabled: !c.enabled})});
       await loadConnections(); showConnection(slug);
     };
+    if ($("c-creds")) $("c-creds").onclick = () => credentialsForm(c);
     $("c-delete").onclick = async () => {
       if (!confirm(`Delete the connection “${c.name}” and its ${ops.total} operations?`)) return;
       await api(`/api/connections/${encodeURIComponent(slug)}`, {method: "DELETE"});
@@ -305,6 +438,38 @@ async function showConnection(slug) {
       await loadConnections();
     };
   }
+}
+
+// Set or replace a connection's sign-in (e.g. after importing settings, which never carry secrets).
+function credentialsForm(c) {
+  const box = $("c-creds-form");
+  const types = Object.keys(kinds.auth_types);
+  const render = (type) => {
+    const spec = kinds.auth_types[type] || {secrets: [], settings: []};
+    box.innerHTML = `<div class="card" style="margin-top:10px"><label for="cr-type" style="margin-top:0">Sign-in</label>
+      <select id="cr-type">${types.map(t => `<option value="${esc(t)}" ${t === type ? "selected" : ""}>${esc(t.replaceAll("_", " "))}</option>`).join("")}</select>
+      ${[...spec.secrets, ...spec.settings].map(k => `<label for="cr-${esc(k)}">${esc(k.replaceAll("_", " "))}</label>
+        <input id="cr-${esc(k)}" data-cr="${esc(k)}" style="width:100%" autocomplete="off"
+          type="${["api_key", "password", "token", "client_secret"].includes(k) ? "password" : "text"}"
+          value="${esc(spec.settings.includes(k) ? (c.settings || {})[k] || "" : "")}"
+          placeholder="${spec.secrets.includes(k) && c.secrets_set.includes(k) ? "saved, leave blank to keep" : ""}">`).join("")}
+      <div class="row" style="margin-top:10px"><button class="primary small" id="cr-save" type="button">Save credentials</button>
+        <span class="m" id="cr-out"></span></div></div>`;
+    $("cr-type").onchange = (e) => render(e.target.value);
+    $("cr-save").onclick = async () => {
+      const auth = {type: $("cr-type").value};
+      box.querySelectorAll("[data-cr]").forEach(i => {
+        const v = i.value.trim(); if (!v) return;
+        if (i.dataset.cr === "headers") { try { auth.headers = JSON.parse(v); } catch { $("cr-out").textContent = "Headers must be JSON"; throw new Error("bad json"); } }
+        else auth[i.dataset.cr] = v;
+      });
+      try {
+        await api(`/api/connections/${encodeURIComponent(c.slug)}`, {method: "PATCH", body: JSON.stringify({auth})});
+        $("cr-out").innerHTML = '<span class="ok">Saved (encrypted)</span>';
+      } catch (e) { $("cr-out").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+    };
+  };
+  render(c.auth_type || "none");
 }
 
 // ── operation details + try it ─────────────────────────────

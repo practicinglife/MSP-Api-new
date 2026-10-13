@@ -25,10 +25,17 @@ AUTH_TYPES: dict[str, dict[str, list[str]]] = {
     "basic": {"secrets": ["username", "password"], "settings": []},
     "bearer": {"secrets": ["token"], "settings": []},
     "headers": {"secrets": ["headers"], "settings": []},                               # {"X-Custom": "…"}
-    "oauth2_client_credentials": {"secrets": ["client_id", "client_secret"],
+    "oauth2_client_credentials": {"secrets": ["client_id", "client_secret"],          # client_auth: basic | body | json
                                   "settings": ["token_url", "scope", "audience", "client_auth"]},
+    # OAuth 2 password grant (e.g. ESET PROTECT): a user name and password are traded for a token
+    "oauth2_password": {"secrets": ["username", "password", "client_id", "client_secret"],
+                        "settings": ["token_url", "scope", "client_auth"]},
+    # A login endpoint that returns a token for JSON {"username", "password"} (e.g. ESET MSP Administrator)
+    "token_login": {"secrets": ["username", "password"],
+                    "settings": ["login_url", "username_field", "password_field", "token_field"]},
     "wsse": {"secrets": ["username", "password"], "settings": []},                     # SOAP WS-Security
 }
+_TOKEN_KEYS = ("access_token", "accessToken", "token", "Token", "id_token")
 
 
 @dataclass
@@ -48,38 +55,93 @@ class ConnCtx:
 _token_cache: dict[str, tuple[float, str]] = {}
 
 
+def _token_from(body: Any, field_name: str = "") -> str:
+    if not isinstance(body, dict):
+        return ""
+    for key in ([field_name] if field_name else []) + list(_TOKEN_KEYS):
+        if body.get(key):
+            return str(body[key])
+    return ""
+
+
 async def _oauth2_token(ctx: ConnCtx) -> str:
-    cache_key = f"{ctx.id}:{ctx.settings.get('token_url')}:{ctx.secrets.get('client_id')}"
+    """Bearer token for the client-credentials or password grant (cached until shortly before it expires)."""
+    grant = "password" if ctx.auth_type == "oauth2_password" else "client_credentials"
+    who = ctx.secrets.get("client_id") if grant == "client_credentials" else ctx.secrets.get("username")
+    cache_key = f"{ctx.id}:{grant}:{ctx.settings.get('token_url')}:{who}"
     hit = _token_cache.get(cache_key)
     if hit and hit[0] > time.monotonic():
         return hit[1]
     token_url = ctx.settings.get("token_url") or ""
     check_url(token_url)
-    data = {"grant_type": "client_credentials"}
+    data: dict[str, str] = {"grant_type": grant}
+    if grant == "password":
+        data.update({"username": str(ctx.secrets.get("username", "")), "password": str(ctx.secrets.get("password", ""))})
     if ctx.settings.get("scope"):
         data["scope"] = ctx.settings["scope"]
     if ctx.settings.get("audience"):
         data["audience"] = ctx.settings["audience"]
     headers = {"Accept": "application/json"}
     cid, secret = str(ctx.secrets.get("client_id", "")), str(ctx.secrets.get("client_secret", ""))
-    if ctx.settings.get("client_auth", "basic") == "body":
-        data.update({"client_id": cid, "client_secret": secret})
-    else:
-        headers["Authorization"] = "Basic " + base64.b64encode(f"{cid}:{secret}".encode()).decode()
+    client_auth = ctx.settings.get("client_auth") or ("basic" if grant == "client_credentials" else "body")
+    if cid or secret:
+        if client_auth in ("body", "json"):
+            data.update({"client_id": cid, "client_secret": secret})
+        else:
+            headers["Authorization"] = "Basic " + base64.b64encode(f"{cid}:{secret}".encode()).decode()
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        r = await client.post(token_url, data=data, headers=headers)
+        if client_auth == "json":  # token endpoints that only take JSON (e.g. ConnectWise Asio)
+            r = await client.post(token_url, json=data, headers=headers)
+        else:
+            r = await client.post(token_url, data=data, headers=headers)
     if r.status_code != 200:
         raise CallError(f"OAuth2 token request failed (HTTP {r.status_code})", 502, r.text[:500])
     body = r.json()
-    token = body.get("access_token")
+    token = _token_from(body)
     if not token:
         raise CallError("OAuth2 token response had no access_token", 502)
     _token_cache[cache_key] = (time.monotonic() + max(30, int(body.get("expires_in", 3600)) - 60), token)
-    return str(token)
+    return token
+
+
+async def _login_token(ctx: ConnCtx) -> str:
+    """Bearer token from a login endpoint that takes JSON credentials (``token_login``)."""
+    url = ctx.settings.get("login_url") or ""
+    cache_key = f"{ctx.id}:login:{url}:{ctx.secrets.get('username')}"
+    hit = _token_cache.get(cache_key)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    check_url(url)
+    payload = {str(ctx.settings.get("username_field") or "username"): str(ctx.secrets.get("username", "")),
+               str(ctx.settings.get("password_field") or "password"): str(ctx.secrets.get("password", ""))}
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        r = await client.post(url, json=payload, headers={"Accept": "application/json"})
+    if r.status_code != 200:
+        raise CallError(f"Sign-in failed (HTTP {r.status_code})", 502, r.text[:500])
+    body = r.json()
+    token = _token_from(body, str(ctx.settings.get("token_field") or ""))
+    if not token:
+        raise CallError("The login response had no token", 502)
+    expires = body.get("expires_in") or body.get("expiresIn") if isinstance(body, dict) else None
+    try:
+        ttl = max(30, int(expires) - 60) if expires else 25 * 60
+    except (TypeError, ValueError):
+        ttl = 25 * 60
+    _token_cache[cache_key] = (time.monotonic() + ttl, token)
+    return token
 
 
 async def auth_headers_and_params(ctx: ConnCtx) -> tuple[dict[str, str], dict[str, str]]:
-    """Headers and query parameters that authenticate a request for this connection."""
+    """Headers and query parameters that authenticate a request for this connection, plus the connection's
+    fixed ``extra_headers`` setting (e.g. an API version or tenant header some APIs require on every call)."""
+    headers, params = await _auth(ctx)
+    extra = (ctx.settings or {}).get("extra_headers") or {}
+    if isinstance(extra, dict):
+        headers = {**{str(k): str(v) for k, v in extra.items() if v not in (None, "")}, **headers}
+    return headers, params
+
+
+async def _auth(ctx: ConnCtx) -> tuple[dict[str, str], dict[str, str]]:
     t, s = ctx.auth_type or "none", ctx.secrets or {}
     if t == "api_key":
         name = ctx.settings.get("api_key_name") or "X-API-Key"
@@ -94,8 +156,10 @@ async def auth_headers_and_params(ctx: ConnCtx) -> tuple[dict[str, str], dict[st
     if t == "headers":
         hdrs = s.get("headers") or {}
         return {str(k): str(v) for k, v in hdrs.items()} if isinstance(hdrs, dict) else {}, {}
-    if t == "oauth2_client_credentials":
+    if t in ("oauth2_client_credentials", "oauth2_password"):
         return {"Authorization": f"Bearer {await _oauth2_token(ctx)}"}, {}
+    if t == "token_login":
+        return {"Authorization": f"Bearer {await _login_token(ctx)}"}, {}
     return {}, {}
 
 

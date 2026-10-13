@@ -28,7 +28,9 @@ log = structlog.get_logger(__name__)
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 # Names already used by built-in platform connectors / reserved routes.
 RESERVED_SLUGS = {"connectwise_psa", "sentinelone", "eset", "eset_connect", "asio", "screenconnect", "avast",
-                  "generic_rest", "msp_api_tools", "msp", "admin", "api", "mcp", "all"}
+                  "generic_rest", "msp_api_tools", "msp", "admin", "api", "mcp", "all",
+                  # routes under /api/connections/
+                  "templates", "from_template", "directory", "kinds", "export", "import"}
 MAX_STORED_SOURCE = 10 * 1024 * 1024
 MAX_RESULT_CHARS = 200_000
 CALL_TIMEOUT_S = 120
@@ -196,7 +198,7 @@ async def reimport(slug: str, actor: str, source: dict[str, Any] | None = None) 
     async with get_session_factory()() as db:
         conn = await _get(db, slug)
         src = dict(source or conn.source or {})
-        if not (src.get("url") or src.get("text")) and conn.kind not in ("sql", "mongodb", "mcp", "graphql", "odata"):
+        if not (src.get("url") or src.get("text")) and conn.kind not in ("sql", "mongodb", "mcp", "graphql", "odata", "builtin"):
             raise SourceError("No stored definition to re-import — pass a new source")
         _forget(conn)
         result = await _discover(ctx_of(conn), src)
@@ -228,6 +230,9 @@ def _forget(conn: Connection) -> None:
 async def update_connection(slug: str, body: dict[str, Any], actor: str) -> dict[str, Any]:
     async with get_session_factory()() as db:
         conn = await _get(db, slug)
+        if conn.kind == "builtin" and ("auth" in body or "base_url" in body):
+            raise CallError("A built-in tool's credentials and address are changed in its settings "
+                            "(Built-in integrations on this page, or Get started)", 400)
         if "name" in body:
             conn.name = str(body["name"]).strip()[:255] or conn.name
         if "base_url" in body:
@@ -247,12 +252,23 @@ async def update_connection(slug: str, body: dict[str, Any], actor: str) -> dict
         _forget(conn)
         await db.commit()
         log.info("connection.updated", slug=slug, by=actor, fields=sorted(body))
-        return summary(conn)
+        out = summary(conn)
+    if conn.kind == "builtin" and "enabled" in body:  # the live connector follows the switch
+        from app.services.builtin_integrations import set_enabled
+
+        await set_enabled(slug, bool(body["enabled"]), actor)
+    return out
 
 
 async def delete_connection(slug: str, actor: str) -> dict[str, Any]:
     async with get_session_factory()() as db:
         conn = await _get(db, slug)
+        if conn.kind == "builtin":
+            from app.services.builtin_integrations import remove
+
+            await db.rollback()
+            result = await remove(slug, actor)
+            return {"slug": slug, "deleted": True, **result}
         _forget(conn)
         for table in (Operation, ConnectionSync, ConnectionRecord):  # its operations and its local copy go too
             await db.execute(delete(table).where(table.connection_id == conn.id),
@@ -261,6 +277,52 @@ async def delete_connection(slug: str, actor: str) -> dict[str, Any]:
         await db.commit()
     log.info("connection.deleted", slug=slug, by=actor)
     return {"slug": slug, "deleted": True}
+
+
+async def set_auth_type(slug: str, auth_type: str) -> None:
+    """Set the sign-in type without secrets (imports: the person adds the credentials afterwards)."""
+    if auth_type not in AUTH_TYPES:
+        raise SourceError(f"Unknown auth type '{auth_type}'")
+    async with get_session_factory()() as db:
+        conn = await _get(db, slug)
+        conn.auth_type = auth_type
+        await db.commit()
+
+
+async def free_slug(slug: str) -> str:
+    """``slug``, or ``slug_2``, ``slug_3`` … when it's taken or reserved (e.g. connecting the same API twice)."""
+    async with get_session_factory()() as db:
+        taken = set((await db.execute(select(Connection.slug))).scalars())
+    candidate, n = slug, 1
+    while candidate in taken or candidate in RESERVED_SLUGS:
+        n += 1
+        candidate = f"{slug[:37]}_{n}"
+    return candidate
+
+
+async def flag_by_path(slug: str, wanted: list[tuple[str, str]], flag: str, actor: str) -> list[str]:
+    """Set ``flag`` (``pinned`` or ``read_only``) on the operations matching (METHOD, /path). Returns their names."""
+    if not wanted:
+        return []
+    keys = {(m.upper(), p) for m, p in wanted}
+    async with get_session_factory()() as db:
+        conn = await _get(db, slug)
+        ops = (await db.execute(select(Operation).where(Operation.connection_id == conn.id))).scalars().all()
+        changed = []
+        for op in ops:
+            if ((op.method or "").upper(), op.target or "") in keys:
+                setattr(op, flag, True)
+                changed.append(op.name)
+        if changed:
+            conn.updated_at = _now()  # tells the search index to rebuild
+            await db.commit()
+    log.info("operations.flagged", slug=slug, flag=flag, operations=changed, by=actor)
+    return changed
+
+
+async def pin_by_path(slug: str, wanted: list[tuple[str, str]], actor: str) -> list[str]:
+    """Pin the operations matching (METHOD, /path) as tools of their own. Returns the pinned names."""
+    return await flag_by_path(slug, wanted, "pinned", actor)
 
 
 async def list_connections() -> list[dict[str, Any]]:
@@ -343,6 +405,33 @@ def validate_args(schema: dict[str, Any] | None, args: dict[str, Any]) -> None:
         raise CallError("Invalid arguments: " + "; ".join(msgs), 400, msgs)
 
 
+def _supplied_headers(conn: Connection) -> set[str]:
+    """Header names the connection itself sends on every call (sign-in, ``extra_headers``), lower-case."""
+    settings, secrets = conn.settings or {}, conn.secrets or {}
+    names = {str(k).lower() for k in (settings.get("extra_headers") or {})}
+    if conn.auth_type in ("basic", "bearer", "oauth2_client_credentials", "oauth2_password", "token_login"):
+        names.add("authorization")
+    if conn.auth_type == "api_key" and settings.get("api_key_in", "header") == "header":
+        names.add(str(settings.get("api_key_name") or "X-API-Key").lower())
+    if conn.auth_type == "headers" and isinstance(secrets.get("headers"), dict):
+        names |= {str(k).lower() for k in secrets["headers"]}
+    return names
+
+
+def _without_supplied_headers(op: Operation, conn: Connection) -> dict[str, Any] | None:
+    """The operation's input schema minus header parameters the connection already sends — e.g. ConnectWise
+    PSA's definition marks a ``clientId`` header required on every operation, which the connection adds itself."""
+    schema = op.input_schema
+    supplied = _supplied_headers(conn)
+    binding = op.binding if isinstance(op.binding, dict) else {}
+    params = binding.get("params") if isinstance(binding.get("params"), list) else []
+    covered = {p.get("arg") or p["name"] for p in params
+               if isinstance(p, dict) and p.get("in") == "header" and str(p.get("name", "")).lower() in supplied}
+    if not schema or not covered or not schema.get("required"):
+        return schema
+    return {**schema, "required": [r for r in schema["required"] if r not in covered]}
+
+
 def _trim(value: Any) -> tuple[Any, bool]:
     text = json.dumps(value, default=str)
     if len(text) <= MAX_RESULT_CHARS:
@@ -379,7 +468,7 @@ async def call_operation(slug: str, name: str, args: dict[str, Any], *, approved
             raise CallError(f"'{slug}.{op.name}' is disabled", 403)
         if not approved and (principal is None or not principal.allows(slug, READ)):
             raise CallError(f"Your credential may not use '{slug}'", 403)
-        validate_args(op.input_schema, args)
+        validate_args(_without_supplied_headers(op, conn), args)
 
         if not op.read_only and not approved:
             from fastapi import HTTPException
@@ -419,7 +508,7 @@ async def call_operation(slug: str, name: str, args: dict[str, Any], *, approved
 
 
 async def _propose(conn: Connection, op: Operation, args: dict[str, Any], principal: Principal | None) -> dict[str, Any]:
-    from app.api.auth_m365 import EXTERNAL_BASE
+    from app.org_profile import external_base_url
     from app.services import changes as svc
 
     who = principal.label() if principal else "system"
@@ -429,5 +518,5 @@ async def _propose(conn: Connection, op: Operation, args: dict[str, Any], princi
     except svc.ChangeError as exc:
         raise CallError(str(exc), exc.status) from exc
     return {"ok": True, "pending_approval": True, "connection": conn.slug, "operation": op.name,
-            "change": svc.summarize(c, EXTERNAL_BASE),
+            "change": svc.summarize(c, external_base_url()),
             "next": "This write needs approval: an Editor submits it and an Approver approves it at the url."}

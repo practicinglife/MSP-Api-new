@@ -1,0 +1,95 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: Auvik API
+  version: starter
+  description: 'Starter definition: tenants, devices, networks and alerts. Made for
+    API Tools connection templates; re-import a fuller definition if the vendor publishes
+    one.'
+paths:
+  /tenants:
+    get:
+      operationId: listTenants
+      summary: List tenants
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /inventory/device/info:
+    get:
+      operationId: listDevices
+      summary: List devices
+      parameters:
+      - name: tenants
+        in: query
+        required: false
+        description: Tenant IDs, comma separated
+        schema:
+          type: string
+      - name: filter[deviceType]
+        in: query
+        required: false
+        description: Device type
+        schema:
+          type: string
+      - name: page[first]
+        in: query
+        required: false
+        description: Page size
+        schema:
+          type: integer
+      - name: page[after]
+        in: query
+        required: false
+        description: Cursor
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /inventory/network/info:
+    get:
+      operationId: listNetworks
+      summary: List networks
+      parameters:
+      - name: tenants
+        in: query
+        required: false
+        description: Tenant IDs, comma separated
+        schema:
+          type: string
+      - name: page[first]
+        in: query
+        required: false
+        description: Page size
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /alert/history/info:
+    get:
+      operationId: listAlerts
+      summary: List alert history
+      parameters:
+      - name: tenants
+        in: query
+        required: false
+        description: Tenant IDs, comma separated
+        schema:
+          type: string
+      - name: filter[status]
+        in: query
+        required: false
+        description: created, resolved
+        schema:
+          type: string
+      - name: page[first]
+        in: query
+        required: false
+        description: Page size
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK

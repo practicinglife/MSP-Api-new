@@ -29,12 +29,20 @@ MAX_DEPTH = 4
 MAX_PROPERTIES = 150
 
 
+class _Loader(yaml.SafeLoader):
+    """Safe YAML that also accepts a bare ``=`` (YAML 1.1's "value" tag), which some published definitions
+    contain (e.g. Zendesk's) and plain ``safe_load`` rejects."""
+
+
+_Loader.add_constructor("tag:yaml.org,2002:value", lambda loader, node: loader.construct_scalar(node))
+
+
 def parse_document(text: str) -> dict[str, Any]:
     try:
         doc = json.loads(text)
     except ValueError:
         try:
-            doc = yaml.safe_load(text)
+            doc = yaml.load(text, Loader=_Loader)  # noqa: S506 — a SafeLoader subclass
         except yaml.YAMLError as exc:
             raise SourceError(f"Not valid JSON or YAML: {exc}") from exc
     if not isinstance(doc, dict):
@@ -142,7 +150,11 @@ def _auth_hint(spec: dict[str, Any], refs: _Refs) -> dict[str, Any] | None:
             if cc and cc.get("tokenUrl"):
                 return {"auth_type": "oauth2_client_credentials", "token_url": cc["tokenUrl"],
                         "scope": " ".join((cc.get("scopes") or {}).keys()), "scheme": name}
-            return {"auth_type": "bearer", "scheme": name, "note": "OAuth2 (non client-credentials) — paste a token"}
+            pw = flows.get("password") or (s if s.get("flow") == "password" else None)
+            if pw and pw.get("tokenUrl"):
+                return {"auth_type": "oauth2_password", "token_url": pw["tokenUrl"],
+                        "scope": " ".join((pw.get("scopes") or {}).keys()), "scheme": name}
+            return {"auth_type": "bearer", "scheme": name, "note": "OAuth2 (sign-in flow) — paste a token"}
         if t == "openidconnect":
             return {"auth_type": "bearer", "scheme": name}
     return None

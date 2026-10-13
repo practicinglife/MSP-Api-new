@@ -1,0 +1,164 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: HaloPSA API
+  version: starter
+  description: 'Starter definition: tickets, clients, sites, assets, users and agents.
+    Made for API Tools connection templates; re-import a fuller definition if the
+    vendor publishes one.'
+paths:
+  /Tickets:
+    get:
+      operationId: listTickets
+      summary: List tickets
+      parameters:
+      - name: search
+        in: query
+        required: false
+        description: Text to search for
+        schema:
+          type: string
+      - name: client_id
+        in: query
+        required: false
+        description: Only this client
+        schema:
+          type: integer
+      - name: open_only
+        in: query
+        required: false
+        description: Only open tickets
+        schema:
+          type: boolean
+      - &id001
+        name: pageinate
+        in: query
+        required: false
+        description: Page the results
+        schema:
+          type: boolean
+      - &id002
+        name: page_size
+        in: query
+        required: false
+        description: Page size
+        schema:
+          type: integer
+      - &id003
+        name: page_no
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /Tickets/{id}:
+    get:
+      operationId: getTicket
+      summary: Get a ticket
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Ticket ID
+        schema:
+          type: integer
+      - name: includedetails
+        in: query
+        required: false
+        description: Include details
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+  /Client:
+    get:
+      operationId: listClients
+      summary: List clients
+      parameters:
+      - name: search
+        in: query
+        required: false
+        description: Text to search for
+        schema:
+          type: string
+      - *id001
+      - *id002
+      - *id003
+      responses:
+        '200':
+          description: OK
+  /Site:
+    get:
+      operationId: listSites
+      summary: List sites
+      parameters:
+      - name: client_id
+        in: query
+        required: false
+        description: Only this client
+        schema:
+          type: integer
+      - name: search
+        in: query
+        required: false
+        description: Text to search for
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /Asset:
+    get:
+      operationId: listAssets
+      summary: List assets
+      parameters:
+      - name: client_id
+        in: query
+        required: false
+        description: Only this client
+        schema:
+          type: integer
+      - name: search
+        in: query
+        required: false
+        description: Text to search for
+        schema:
+          type: string
+      - *id001
+      - *id002
+      - *id003
+      responses:
+        '200':
+          description: OK
+  /Users:
+    get:
+      operationId: listUsers
+      summary: List end users
+      parameters:
+      - name: client_id
+        in: query
+        required: false
+        description: Only this client
+        schema:
+          type: integer
+      - name: search
+        in: query
+        required: false
+        description: Text to search for
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /Agent:
+    get:
+      operationId: listAgents
+      summary: List agents (technicians)
+      parameters: []
+      responses:
+        '200':
+          description: OK

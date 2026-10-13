@@ -209,7 +209,7 @@ def test_only_reads_and_only_approvers(app_client, db_factory) -> None:  # type:
     s = _sync(app_client, "list_tickets")
     assert app_client.post("/api/connections/desk/syncs", json={"operation": "list_tickets"}).status_code == 409
 
-    app_client.cookies.set("msp_session", make_session(db_factory, EDITOR, "ed@example.com"))
+    app_client.cookies.set("msp_session", make_session(db_factory, ["Reader"], "reader@example.com"))
     assert app_client.post("/api/connections/desk/syncs", json={"operation": "list_devices"}).status_code == 403
     assert app_client.post(f"/api/connections/desk/syncs/{s['id']}/run").status_code == 403
     assert app_client.delete(f"/api/connections/desk/syncs/{s['id']}").status_code == 403

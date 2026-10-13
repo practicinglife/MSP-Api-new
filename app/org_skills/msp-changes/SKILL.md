@@ -8,7 +8,7 @@ description: Make changes in PSA, Asio, ScreenConnect, SentinelOne or ESET — r
 Load `msp-api` first. **You cannot make changes directly — you propose them.** Every change goes:
 
 1. **Propose** (you, via `propose_change`) → a preview with the exact requests and the current state.
-2. **Submit** — a person signs in with Microsoft 365 (Editor) on the approval page and confirms.
+2. **Submit** — an Editor signs in on the approval page and confirms.
 3. **Final approval** — an **Approver** approves; only then does anything run. Results land on the same page.
 
 ## How to do it

@@ -143,6 +143,27 @@ class CompanyAlias(Base):
     alias_name: Mapped[str] = mapped_column(String(512), nullable=False, unique=True, index=True)
     canonical_name: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # "manual" (a person linked them) or "auto" (company_linker found the evidence; note says what it was)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual", server_default="manual")
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class CompanyMatchDecision(Base):
+    """A person's answer about a company name, so it is never suggested again.
+
+    ``decision``: ``different`` — ``name`` is not the same client as ``target``;
+    ``not_managed`` — ``name`` is a contact-only / one-off company, not expected in every tool.
+    """
+
+    __tablename__ = "company_match_decisions"
+    __table_args__ = (UniqueConstraint("name", "target", "decision", name="uq_company_match_decision"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    target: Mapped[str] = mapped_column(String(512), nullable=False, default="", server_default="")
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    decided_by: Mapped[str] = mapped_column(String(256), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
@@ -699,7 +720,7 @@ class AuditLog(Base):
 
 
 class ChangeRequest(Base):
-    """A proposed vendor write. Executes only after submit (Editor) + final approval (Approver)."""
+    """A proposed vendor write. Executes only after an Editor submits it and an Approver approves it."""
 
     __tablename__ = "change_requests"
 

@@ -124,7 +124,7 @@ TOOLS: list[Tool] = [
     Tool("get_skill", "The current text of an org skill (how we do something). Always the latest version.",
          {"name": _s("Skill name from find_workflow")}, ["name"], path="__skill__"),
     Tool("save_workflow", "Propose adding/updating a recipe, playbook or skill in the org library after you worked something "
-         "out that others will ask again. Validated now; live for everyone once an Editor submits and an Approver approves. "
+         "out that others will ask again. Validated now; live for everyone once an Editor submits, an Approver approves. "
          "Read get_skill('msp-library') for the formats first.",
          {"kind": _s("What to save", enum=["recipe", "playbook", "skill"]), "name": _s("kebab-case name"),
           "content": _s("Full file: YAML (recipe/playbook) or Markdown with frontmatter (skill)", maxLength=60000),
@@ -172,7 +172,7 @@ TOOLS: list[Tool] = [
          {"kind": _s("Which list", enum=["boards", "priorities", "members", "work-types"])}, ["kind"], path="/api/tickets/{kind}", live=True),
     Tool("refresh_client_registry", "Re-read company lists from every tool (~5 s) and auto-link new companies to clients. Safe: reads vendors, writes only the local registry. Confirmed links and approved names are kept.",
          method="POST", path="/api/clients/sync", read_only=False),
-    # ── Changes: propose only. Execution needs an Editor (M365) to submit and the Approver's final approval. ──
+    # ── Changes: propose only. Execution needs an Editor to submit and an Approver to approve. ──
     Tool("list_commands", "List the write commands and playbooks that can be proposed (name, risk, platforms, parameters).",
          path="/api/commands"),
     Tool("describe_command", "Full parameter schema for one command or playbook (e.g. 'ticket_add_note', 'playbook:offboard-device').",
@@ -869,7 +869,7 @@ code{font:12px ui-monospace,Consolas,monospace}a{color:var(--accent)}
 <h1>Workflow Library</h1>
 <div class="m">Saved once, reused by everyone through Claude. Recipes = read workflows (run instantly) · Playbooks = multi-step
 change templates (each run approved) · Commands = built-in changes · Skills = how we do things. New entries are saved through
-<a href="/changes">Changes</a> (Editor submits, an Approver approves).</div>
+<a href="/changes">Changes</a> (an Editor submits, an Approver approves).</div>
 <div class="card" style="display:flex;gap:10px;flex-wrap:wrap"><input id="q" placeholder="Search, e.g. offboard a device" style="flex:1;min-width:220px">
 <select id="kind"><option value="">All kinds</option><option>recipe</option><option>playbook</option><option>command</option><option>skill</option></select></div>
 <div class="card"><table><thead><tr><th>Kind</th><th>Name</th><th>What it does</th><th>Updated</th></tr></thead><tbody id="rows"></tbody></table></div>

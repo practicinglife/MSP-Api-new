@@ -32,9 +32,22 @@ _FAST_MEMORY_DB_PATH = _TOOLS_DIR / "api_gateway" / "fast_memory_api.db"
 
 # ── Auth helpers ──────────────────────────────────────────────────
 
+def _psa_settings() -> Any:
+    """The live PSA connector's settings (credentials saved in the app), else ``.env``."""
+    try:
+        from app.api.connector_health import get_connectors
+
+        psa = next((c for c in get_connectors() if c.platform_name == "connectwise_psa"), None)
+        if psa is not None and getattr(psa, "_settings", None) is not None:
+            return psa._settings
+    except Exception:  # noqa: BLE001 — MSP pack not loaded: fall back to .env
+        pass
+    return get_settings()
+
+
 def _auth_headers() -> dict[str, str]:
-    """Build CW Manage auth headers from project settings."""
-    s = get_settings()
+    """Build CW Manage auth headers from the PSA connector's credentials."""
+    s = _psa_settings()
     credentials = base64.b64encode(
         f"{s.cw_company_id}+{s.cw_public_key}:{s.cw_private_key}".encode()
     ).decode()
@@ -46,7 +59,7 @@ def _auth_headers() -> dict[str, str]:
 
 
 def _base_url() -> str:
-    return get_settings().cw_base_url
+    return _psa_settings().cw_base_url
 
 
 # ── Low-level API request ────────────────────────────────────────

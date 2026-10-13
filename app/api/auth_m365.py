@@ -7,11 +7,12 @@ Configuration (.env), one of:
 * Microsoft Entra ID: ``MSP_ENTRA_TENANT_ID``, ``MSP_ENTRA_CLIENT_ID``, ``MSP_ENTRA_CLIENT_SECRET``
 * Any OIDC provider (Google, Okta, Keycloak, Auth0 …): ``MSP_OIDC_ISSUER``, ``MSP_OIDC_CLIENT_ID``,
   ``MSP_OIDC_CLIENT_SECRET``; optional ``MSP_OIDC_ROLES_CLAIM`` (default ``roles``; e.g. ``groups``),
-  ``MSP_OIDC_ROLE_MAP`` (JSON: claim value → app role, e.g. ``{"msp-editors": "MSPTools.Editor"}``),
+  ``MSP_OIDC_ROLE_MAP`` (JSON: claim value → app role, e.g. ``{"it-admins": "Admin", "helpdesk": "Reader"}``),
   ``MSP_OIDC_DISPLAY_NAME`` (button text).
 
-App roles: ``MSPTools.User`` (read, propose), ``MSPTools.Editor`` (writes, submit changes),
-``MSPTools.Approver`` (final approval, connector credentials), ``MSPTools.Admin`` (everything).
+App roles: ``Reader`` (read, call read-only operations, propose), ``Editor`` (writes, submit changes),
+``Approver`` (final approval, manage connections and credentials), ``Admin`` (everything, incl. users, keys,
+sign-in, certificates). Older role values (``MSPTools.User`` / ``.Editor`` / ``.Approver`` / ``.Admin``) still work.
 Without an IdP, people sign in with a local account (``/auth/local``, password + authenticator code).
 """
 
@@ -37,14 +38,19 @@ from sqlalchemy import delete, select
 
 from app.auth.principal import (  # noqa: F401
     ALL_ROLES,
+    RANK,
     ROLE_ADMIN,
     ROLE_APPROVER,
     ROLE_EDITOR,
+    ROLE_READER,
     ROLE_USER,
+    normalize_role,
+    normalize_roles,
+    role_rank,
 )
 from app.db.repository import get_session_factory
 from app.db.schema import AuthFlow, UserSession
-from app.org_profile import EXTERNAL_BASE_URL
+from app.org_profile import external_base_url
 
 log = structlog.get_logger(__name__)
 
@@ -53,7 +59,6 @@ router = APIRouter(tags=["admin"])
 SESSION_COOKIE = "msp_session"
 SESSION_TTL = timedelta(hours=8)
 FLOW_TTL = timedelta(minutes=10)
-EXTERNAL_BASE = EXTERNAL_BASE_URL
 _ALGORITHMS = ["RS256", "RS384", "RS512", "PS256", "ES256", "ES384"]
 _CACHE_TTL_S = 3600
 _cache: dict[str, tuple[float, Any]] = {}
@@ -112,14 +117,15 @@ def _roles_from_claims(claims: dict[str, Any]) -> list[str]:
     claim = os.environ.get("MSP_OIDC_ROLES_CLAIM", "roles").strip() or "roles"
     raw = claims.get(claim) or []
     values = [raw] if isinstance(raw, str) else [str(v) for v in raw if isinstance(v, (str, int))]
-    mapping: dict[str, str] = {r: r for r in ALL_ROLES}
+    mapping: dict[str, str] = {}
     extra = os.environ.get("MSP_OIDC_ROLE_MAP", "").strip()
     if extra:
         try:
             mapping.update({str(k): str(v) for k, v in json.loads(extra).items()})
         except (ValueError, AttributeError):
             log.warning("oidc.role_map_invalid")
-    return sorted({mapping[v] for v in values if mapping.get(v) in ALL_ROLES})
+    # Mapped group/claim values first, then the value itself (Reader / Approver / Admin, or an older name)
+    return sorted(normalize_roles(mapping.get(v, v) for v in values))
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -138,7 +144,7 @@ def _hash(v: str) -> str:
 
 
 def _redirect_uri() -> str:
-    return f"{EXTERNAL_BASE}/auth/callback"
+    return f"{external_base_url()}/auth/callback"
 
 
 def cookie_secure(request: Request) -> bool:
@@ -164,8 +170,8 @@ async def get_session(request: Request) -> UserSession | None:
 def has_role(session: UserSession | None, *roles: str) -> bool:
     if not session:
         return False
-    have = session.roles or []
-    return ROLE_ADMIN in have or any(r in have for r in roles)
+    wanted = [RANK[n] for n in (normalize_role(r) for r in roles) if n]
+    return bool(wanted) and role_rank(session.roles) >= min(wanted)
 
 
 async def require_role(request: Request, *roles: str) -> UserSession:
@@ -174,7 +180,8 @@ async def require_role(request: Request, *roles: str) -> UserSession:
     if not s:
         raise HTTPException(401, "Sign in first: /auth/login")
     if not has_role(s, *roles):
-        raise HTTPException(403, f"Requires role: {' or '.join(roles)}")
+        lowest = min((normalize_role(r) or r for r in roles), key=lambda r: RANK.get(r, 99))
+        raise HTTPException(403, f"Requires the {lowest} role")
     return s
 
 
@@ -299,9 +306,9 @@ async def login(request: Request, next: str | None = None):  # type: ignore[no-u
     if not oidc_configured():
         return RedirectResponse(f"/auth/local?{urlencode({'next': _safe_next(next)})}", 302)
     host = (request.url.hostname or "").lower()
-    if host != urlparse(EXTERNAL_BASE).hostname:
+    if host != urlparse(external_base_url()).hostname:
         # Cookies + the IdP redirect live on the configured public URL.
-        return RedirectResponse(f"{EXTERNAL_BASE}/auth/login?{urlencode({'next': _safe_next(next)})}", 302)
+        return RedirectResponse(f"{external_base_url()}/auth/login?{urlencode({'next': _safe_next(next)})}", 302)
     return RedirectResponse(await start_flow("session", next_url=next), 302)
 
 
@@ -331,7 +338,7 @@ async def callback(request: Request):  # type: ignore[no-untyped-def]
 
     if not roles:
         return HTMLResponse(
-            f"<p>{html.escape(upn)} is signed in but has no MSP Tools role. "
+            f"<p>{html.escape(upn)} is signed in but has no role here (Reader, Editor, Approver or Admin). "
             "Ask your administrator to assign one.</p>", 403
         )
 
@@ -361,8 +368,9 @@ async def me(request: Request) -> dict[str, Any]:
     s = await get_session(request)
     if not s:
         return {"signed_in": False, "configured": oidc_configured(), "provider": provider_name()}
-    return {"signed_in": True, "upn": s.upn, "name": s.name, "roles": s.roles, "csrf": s.csrf,
-            "expires_at": s.expires_at}
+    roles = sorted(normalize_roles(s.roles), key=lambda r: RANK[r])
+    return {"signed_in": True, "upn": s.upn, "name": s.name, "roles": roles,
+            "role": roles[-1] if roles else "", "csrf": s.csrf, "expires_at": s.expires_at}
 
 
 async def sessions_for_upn(upn: str) -> list[UserSession]:

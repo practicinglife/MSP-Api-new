@@ -119,17 +119,23 @@ async def _ensure_platform_devices_schema() -> None:
     This self-heals older databases that were created before newer columns
     (like ``company_platform_id``) were introduced.
     """
+    from sqlalchemy import inspect as sa_inspect
     from sqlalchemy import text as sa_text
 
+    # Check first instead of "ADD COLUMN IF NOT EXISTS", which is PostgreSQL-only (SQLite rejects it).
+    wanted = {
+        "company_platform_id": "VARCHAR(256) NOT NULL DEFAULT ''",
+        "client_id": "VARCHAR(36)",
+    }
     factory = get_session_factory()
     async with factory() as session:
-        await session.execute(
-            sa_text(
-                "ALTER TABLE platform_devices "
-                "ADD COLUMN IF NOT EXISTS company_platform_id VARCHAR(256) NOT NULL DEFAULT ''"
-            )
+        conn = await session.connection()
+        existing = await conn.run_sync(
+            lambda c: {col["name"] for col in sa_inspect(c).get_columns("platform_devices")}
         )
-        await session.execute(sa_text("ALTER TABLE platform_devices ADD COLUMN IF NOT EXISTS client_id VARCHAR(36)"))
+        for name, ddl in wanted.items():
+            if name not in existing:
+                await session.execute(sa_text(f"ALTER TABLE platform_devices ADD COLUMN {name} {ddl}"))
         await session.commit()
 
     log.info(
@@ -177,6 +183,7 @@ async def _take_daily_snapshot(run_id: str) -> None:
     """
     from datetime import date
     from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
     from app.db.schema import PlatformDevice as PlatformDeviceRow
 
     today = date.today().isoformat()
@@ -217,10 +224,12 @@ async def _take_daily_snapshot(run_id: str) -> None:
         for company, platform, cnt in plat_rows:
             plat_lookup.setdefault(company, {})[platform] = cnt
 
+        # Same upsert API on both; SQLite (local testing) needs its own dialect's insert.
+        upsert = sqlite_insert if session.get_bind().dialect.name == "sqlite" else pg_insert
         count = 0
         for company, total, matched, unmatched in match_rows:
             plats = plat_lookup.get(company, {})
-            stmt = pg_insert(DailySnapshot).values(
+            stmt = upsert(DailySnapshot).values(
                 id=str(uuid4()),
                 snapshot_date=today,
                 company_canonical=company,
@@ -233,7 +242,7 @@ async def _take_daily_snapshot(run_id: str) -> None:
                 s1_count=plats.get("sentinelone", 0),
                 run_id=run_id,
             ).on_conflict_do_update(
-                constraint="uq_snapshot_company_date",
+                index_elements=["snapshot_date", "company_canonical"],  # uq_snapshot_company_date
                 set_={
                     "total_devices": int(total or 0),
                     "matched_count": int(matched or 0),
@@ -345,10 +354,10 @@ async def run_smart_reconciliation(connectors: list) -> dict[str, Any]:
     import hashlib
     from datetime import UTC, datetime
     from app.services.device_identity import prepare_device_rows, reconcile_from_db
-    from app.services.company_matcher import build_cross_platform_aliases, build_device_cross_reference_aliases
+    from app.services import company_matching
     from app.db.schema import PlatformDevice as PlatformDeviceRow
     from app.db.repository import (
-        CompanyAliasRepository, CompanyMappingRepository, PlatformDeviceRepository,
+        CompanyMappingRepository, PlatformDeviceRepository,
         ReconciledDeviceRepository,
     )
     from app.services.device_identity import prepare_company_mappings
@@ -510,28 +519,20 @@ async def run_smart_reconciliation(connectors: list) -> dict[str, Any]:
 
         # Upsert new devices
         if all_new_devices:
-            alias_repo = CompanyAliasRepository(session)
-            alias_map = await alias_repo.get_alias_map()
-
-            # Build alias map using ALL available device data so cross-platform
-            # company names resolve correctly.  Prefetched devices (unchanged
-            # platforms) are used for alias building ONLY — not re-upserted.
+            # Link company names using ALL available device data so cross-platform
+            # names resolve correctly.  Prefetched devices (unchanged platforms)
+            # are used as evidence ONLY — not re-upserted.
             new_groups: dict[str, list[DeviceRecord]] = {}
-            all_groups_for_aliases: dict[str, list[DeviceRecord]] = {}
+            all_devices_for_links: list[DeviceRecord] = list(all_new_devices)
             for d in all_new_devices:
                 new_groups.setdefault(d.platform, []).append(d)
-                all_groups_for_aliases.setdefault(d.platform, []).append(d)
-            for plat, devs in _prefetched_devices.items():
-                if devs:
-                    all_groups_for_aliases.setdefault(plat, []).extend(devs)
+            for _plat, devs in _prefetched_devices.items():
+                all_devices_for_links.extend(devs or [])
 
-            # CPU-bound matching runs in a worker thread so the app keeps answering requests
-            device_aliases = await asyncio.to_thread(
-                build_device_cross_reference_aliases, list(all_groups_for_aliases.items()), alias_map
+            # Automatic links are saved (with their reason) so people can see and undo them
+            merged_alias_map, _review = await company_matching.refresh_auto_links(
+                session, company_matching.evidence_from_records(all_devices_for_links), apply=False
             )
-            companies_by_platform: dict[str, list] = {plat: [] for plat in all_groups_for_aliases}
-            auto_aliases = await asyncio.to_thread(build_cross_platform_aliases, companies_by_platform, alias_map)
-            merged_alias_map = {**auto_aliases, **device_aliases, **alias_map}
 
             # Only upsert the genuinely new/changed device rows
             device_rows = await asyncio.to_thread(
@@ -941,28 +942,14 @@ async def run_full_reconciliation(
             # Bulk-upsert all fetched devices into platform_devices so db_* tools work
             if all_devices:
                 from app.services.device_identity import prepare_device_rows
-                from app.services.company_matcher import (
-                    build_cross_platform_aliases,
-                    build_device_cross_reference_aliases,
-                )
-                from app.db.repository import CompanyAliasRepository, CompanyMappingRepository
+                from app.services import company_matching
+                from app.db.repository import CompanyMappingRepository
 
-                alias_repo = CompanyAliasRepository(session)
-                alias_map = await alias_repo.get_alias_map()
-
-                # Build cross-platform auto-aliases (handles ASIO truncation vs PSA full names)
-                companies_by_platform: dict[str, list] = {}
-                for result in fetch_results:
-                    companies_by_platform.setdefault(result.platform, []).extend(result.companies)
-
-                auto_aliases = await asyncio.to_thread(
-                    build_cross_platform_aliases, companies_by_platform, alias_map
+                # Link company names across tools (truncation, initials, shared computers);
+                # automatic links are saved with their reason so people can see and undo them
+                merged_alias_map, _review = await company_matching.refresh_auto_links(
+                    session, company_matching.evidence_from_records(all_devices), apply=False
                 )
-                device_aliases = await asyncio.to_thread(
-                    build_device_cross_reference_aliases,
-                    [(r.platform, r.devices) for r in fetch_results], alias_map,
-                )
-                merged_alias_map = {**auto_aliases, **device_aliases, **alias_map}
 
                 # Save the merged alias map to company_mappings so reconcile_from_db uses it
                 from app.services.device_identity import prepare_company_mappings

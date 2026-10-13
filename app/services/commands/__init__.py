@@ -1,7 +1,7 @@
 """Command catalog: named, validated write operations that produce change-request plans.
 
 A command never writes. ``plan(params)`` returns the exact steps (and the current "before" state where it
-can be read). Steps run only after an Editor submits and the Approver gives final approval
+can be read). Steps run only after an Editor submits and an Approver gives final approval
 (``app/services/changes.py``).
 
 Step shapes:

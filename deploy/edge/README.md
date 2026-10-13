@@ -84,7 +84,7 @@ Layers, outermost first — every layer must fail before data is reachable:
    signed-in person (OIDC with verified signatures, or local account with password + authenticator code),
    a connection key (256-bit, stored hashed, scoped, optional expiry), or an OAuth token bound to one MCP
    server (PKCE, single-use codes, 1 h access tokens, rotating refresh tokens, allow-listed redirects).
-5. **Authorization** — roles (User / Editor / Approver / Admin), per-platform write modes
+5. **Authorization** — roles (Reader / Editor / Approver / Admin), per-platform write modes
    (read-only by default), change approvals, audit log of every write and every MCP tool call.
 
 ## Verify

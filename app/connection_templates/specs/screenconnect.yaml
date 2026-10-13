@@ -1,0 +1,91 @@
+# Starter definition for API Tools connection templates: ScreenConnect (ConnectWise Control) RESTful API Manager.
+# Every method is a POST whose body is a JSON array of the method's arguments, in order (that's how the extension
+# works; the bundled app/specs/screenconnect.json lists the reads as GET, which the extension doesn't accept).
+openapi: 3.0.3
+info:
+  title: ScreenConnect RESTful API Manager
+  version: starter
+  description: "Starter definition: sessions by filter or name, session details, notes, commands and messages.
+    Needs the RESTful API Manager extension on your ScreenConnect instance."
+paths:
+  /GetSessionsByFilter:
+    post:
+      operationId: getSessionsByFilter
+      summary: List sessions matching a filter
+      description: "Body: [\"SessionType = 'Access'\"]. Filter fields include SessionType, Name, CustomProperty1-8, GuestMachineName."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["SessionType = 'Access'"]}
+      responses: {"200": {description: OK}}
+  /GetSessionsByName:
+    post:
+      operationId: getSessionsByName
+      summary: Find sessions by name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["DESKTOP-01"]}
+      responses: {"200": {description: OK}}
+  /GetSessionBySessionID:
+    post:
+      operationId: getSessionBySessionID
+      summary: Get a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["00000000-0000-0000-0000-000000000000"]}
+      responses: {"200": {description: OK}}
+  /GetSessionDetailsBySessionID:
+    post:
+      operationId: getSessionDetailsBySessionID
+      summary: Get a session's details (machine info, connections, events)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["00000000-0000-0000-0000-000000000000"]}
+      responses: {"200": {description: OK}}
+  /AddNoteToSession:
+    post:
+      operationId: addNoteToSession
+      summary: Add a note to a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["<session id>", "Note text"]}
+      responses: {"200": {description: OK}}
+  /SendCommandToSession:
+    post:
+      operationId: sendCommandToSession
+      summary: Run a command on a session's machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["<session id>", "ipconfig /all"]}
+      responses: {"200": {description: OK}}
+  /SendMessageToSession:
+    post:
+      operationId: sendMessageToSession
+      summary: Send a chat message to a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["<session id>", "Hello"]}
+      responses: {"200": {description: OK}}
+  /UpdateSessionName:
+    post:
+      operationId: updateSessionName
+      summary: Rename a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: string}, example: ["<session id>", "NEW-NAME"]}
+      responses: {"200": {description: OK}}

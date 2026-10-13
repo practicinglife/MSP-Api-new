@@ -4,15 +4,14 @@ import time
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.base import AbstractPlatformConnector
-from app.db.repository import ConnectorConfigRepository, get_session_factory
+from app.db.repository import get_session_factory
 from app.services.connector_registry import (
     PLATFORM_DEFINITIONS,
-    build_connector,
     redact_credentials,
 )
 
@@ -47,12 +46,13 @@ class ConnectorRegisterRequest(BaseModel):
     platform: str
     credentials: dict[str, str]
     test_connection: bool = True
+    save: bool = True  # False: only test the credentials
 
 
 class ConnectorUpdateRequest(BaseModel):
     """Request body for updating connector credentials."""
 
-    credentials: dict[str, str]
+    credentials: dict[str, str] = {}
     enabled: bool = True
 
 
@@ -138,28 +138,46 @@ async def _test_connector(connector: AbstractPlatformConnector) -> dict[str, Any
     response_model=list[dict[str, Any]],
     summary="Connector health: per-platform configured/enabled status",
 )
-async def list_connectors(
-    session: AsyncSession = Depends(_get_session),
-) -> list[dict[str, Any]]:
-    """Return registered connectors with config status and saved configs."""
-    repo = ConnectorConfigRepository(session)
-    saved_configs = await repo.list_all()
-    saved_map = {c.platform: c for c in saved_configs}
+async def list_connectors() -> list[dict[str, Any]]:
+    """Return live connectors with config status. Built-in tools are connections (kind "builtin")."""
+    from app.services import builtin_integrations as builtins
 
+    state = {c["platform"]: c for c in await builtins.catalog()}
     results = []
     for c in _connectors:
         missing = c.check_config()
-        saved = saved_map.get(c.platform_name)
+        info = state.get(c.platform_name, {})
         results.append({
             "platform": c.platform_name,
             "configured": len(missing) == 0,
             "missing_config": missing,
-            "saved": saved is not None,
-            "enabled": saved.enabled if saved else True,
+            "saved": info.get("credentials_from") == "app",
+            "credentials_from": info.get("credentials_from", ""),
+            "enabled": info.get("enabled", True),
             # Non-secret config/token facts (URLs, scopes requested/granted) — no credentials.
             **({"diagnostics": c.get_diagnostics()} if hasattr(c, "get_diagnostics") else {}),
         })
     return results
+
+
+@router.get("/catalog", response_model=list[dict[str, Any]])
+async def connector_catalog() -> list[dict[str, Any]]:
+    """Every built-in tool (management and security), whether it's connected, and where its credentials
+    come from ("app" = saved encrypted here, "env" = .env). Secrets are redacted."""
+    from app.services import builtin_integrations as builtins
+
+    return await builtins.catalog()
+
+
+@router.post("/catalog/{platform}/test", response_model=dict[str, Any])
+async def test_catalog_entry(platform: str) -> dict[str, Any]:
+    """Test a built-in tool with its stored (or .env) credentials — management, security and detail sources."""
+    from app.services import builtin_integrations as builtins
+
+    try:
+        return await builtins.test(platform)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
 
 
 def _require_master_key() -> None:
@@ -174,141 +192,102 @@ def _require_master_key() -> None:
 @router.get("/platforms", response_model=list[dict[str, Any]])
 async def list_platforms() -> list[dict[str, Any]]:
     """Return all available platform definitions with their credential fields."""
+    from app.services.builtin_integrations import ROLES
+
     return [
-        {"platform": key, **value}
+        {"platform": key, "role": ROLES.get(key, "other"), **value}
         for key, value in PLATFORM_DEFINITIONS.items()
     ]
 
 
 @router.get("/configs", response_model=list[dict[str, Any]])
-async def list_configs(
-    session: AsyncSession = Depends(_get_session),
-) -> list[dict[str, Any]]:
-    """Return all saved connector configurations (secrets redacted)."""
-    repo = ConnectorConfigRepository(session)
-    configs = await repo.list_all()
+async def list_configs() -> list[dict[str, Any]]:
+    """Return built-in tools whose credentials are saved in the app (secrets redacted)."""
+    from sqlalchemy import select
+
+    from app.db.schema import Connection
+
+    async with get_session_factory()() as db:
+        rows = (await db.execute(select(Connection).where(Connection.kind == "builtin"))).scalars().all()
     return [
         {
             "id": c.id,
-            "platform": c.platform,
+            "platform": c.slug,
             "enabled": c.enabled,
-            "credentials": redact_credentials(c.credentials, c.platform),
+            "credentials": redact_credentials(dict(c.secrets), c.slug),
             "created_at": c.created_at.isoformat() if c.created_at else None,
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
         }
-        for c in configs
+        for c in rows if c.secrets
     ]
 
 
+def _who() -> str:
+    from app.auth.principal import get_current
+
+    p = get_current()
+    return p.id if p else ""
+
+
 @router.post("/register", response_model=dict[str, Any])
-async def register_connector(
-    body: ConnectorRegisterRequest,
-    session: AsyncSession = Depends(_get_session),
-) -> dict[str, Any]:
-    """Register a new connector — save credentials, optionally test, and activate."""
+async def register_connector(body: ConnectorRegisterRequest) -> dict[str, Any]:
+    """Save a built-in tool's credentials (encrypted) and make it live; optionally test first.
+    ``save=false`` only tests the credentials."""
+    from app.services import builtin_integrations as builtins
+
     if body.platform not in PLATFORM_DEFINITIONS:
         raise HTTPException(status_code=400, detail=f"Unknown platform: {body.platform}")
-
-    # Build a connector instance to validate and optionally test
-    try:
-        connector = build_connector(body.platform, body.credentials)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    # Validate required fields are present
-    missing = connector.check_config()
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Missing required fields: {', '.join(missing)}",
-        )
-
-    # Optionally test connectivity
     test_result = None
-    if body.test_connection:
-        test_result = await _test_connector(connector)
-        if test_result["status"] == "error":
-            await _close_connector(connector)
-            return {
-                "status": "test_failed",
-                "platform": body.platform,
-                "test_result": test_result,
-                "saved": False,
-            }
-
-    # Save to database (encrypted — needs MSP_MASTER_KEY)
-    _require_master_key()
-    repo = ConnectorConfigRepository(session)
-    await repo.upsert(body.platform, body.credentials, enabled=True)
-
-    # Close old connector's persistent client, then replace in active list
-    global _connectors
-    for old in _connectors:
-        if old.platform_name == body.platform:
-            await _close_connector(old)
-    _connectors = [c for c in _connectors if c.platform_name != body.platform]
-    _connectors.append(connector)
-
+    if body.test_connection or not body.save:
+        try:
+            test_result = await builtins.test(body.platform, body.credentials)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        if test_result["status"] != "ok":
+            return {"status": "test_failed", "platform": body.platform, "test_result": test_result, "saved": False}
+    if not body.save:
+        return {"status": "tested", "platform": body.platform, "test_result": test_result, "saved": False}
+    try:
+        await builtins.save(body.platform, body.credentials, actor=_who())
+    except PermissionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     log.info("connector.registered", platform=body.platform)
-    return {
-        "status": "registered",
-        "platform": body.platform,
-        "test_result": test_result,
-        "saved": True,
-    }
+    return {"status": "registered", "platform": body.platform, "test_result": test_result, "saved": True}
 
 
 @router.put("/configs/{platform}", response_model=dict[str, Any])
-async def update_connector_config(
-    platform: str,
-    body: ConnectorUpdateRequest,
-    session: AsyncSession = Depends(_get_session),
-) -> dict[str, Any]:
-    """Update credentials for an existing connector."""
-    repo = ConnectorConfigRepository(session)
-    existing = await repo.get_by_platform(platform)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Connector config not found")
+async def update_connector_config(platform: str, body: ConnectorUpdateRequest) -> dict[str, Any]:
+    """Update a built-in tool's credentials, or switch it off and on."""
+    from app.services import builtin_integrations as builtins
 
-    _require_master_key()
-    await repo.upsert(platform, body.credentials, enabled=body.enabled)
-
-    # Close old connector's persistent client, then rebuild and replace
-    global _connectors
-    for old in _connectors:
-        if old.platform_name == platform:
-            await _close_connector(old)
-    if body.enabled:
-        connector = build_connector(platform, body.credentials)
-        _connectors = [c for c in _connectors if c.platform_name != platform]
-        _connectors.append(connector)
-    else:
-        _connectors = [c for c in _connectors if c.platform_name != platform]
-
+    if platform not in PLATFORM_DEFINITIONS:
+        raise HTTPException(status_code=404, detail="Unknown platform")
+    try:
+        if body.credentials:
+            await builtins.save(platform, body.credentials, enabled=body.enabled, actor=_who())
+        else:
+            await builtins.set_enabled(platform, body.enabled, actor=_who())
+    except PermissionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     log.info("connector.updated", platform=platform, enabled=body.enabled)
     return {"status": "updated", "platform": platform, "enabled": body.enabled}
 
 
 @router.delete("/configs/{platform}", response_model=dict[str, Any])
-async def delete_connector_config(
-    platform: str,
-    session: AsyncSession = Depends(_get_session),
-) -> dict[str, Any]:
-    """Remove a saved connector configuration and deactivate it."""
-    repo = ConnectorConfigRepository(session)
-    deleted = await repo.delete(platform)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Connector config not found")
+async def delete_connector_config(platform: str) -> dict[str, Any]:
+    """Forget a built-in tool's saved credentials (a tool still set in .env stays connected from there)."""
+    from app.services import builtin_integrations as builtins
 
-    # Close old connector's persistent client, then remove from active list
-    global _connectors
-    for old in _connectors:
-        if old.platform_name == platform:
-            await _close_connector(old)
-    _connectors = [c for c in _connectors if c.platform_name != platform]
-
+    try:
+        result = await builtins.remove(platform, actor=_who())
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
     log.info("connector.removed", platform=platform)
-    return {"status": "removed", "platform": platform}
+    return {"status": "removed", **result}
 
 
 @router.post("/test", response_model=list[dict[str, Any]])

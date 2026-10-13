@@ -57,13 +57,13 @@ def as_text(data: Any, hint: str = "Narrow the request (filters, a smaller page)
 def public_base_url(request: Request) -> str:
     """Base of the server URLs shown to people: MSP_PUBLIC_BASE_URL, else the configured external URL (the one
     OAuth tokens are issued for), else the address this request came in on."""
-    from app.org_profile import EDGE_DOMAIN, EXTERNAL_BASE_URL
+    from app.org_profile import EDGE_DOMAIN, external_base_url
 
     explicit = os.environ.get("MSP_PUBLIC_BASE_URL", "").strip()
     if explicit:
         return explicit.rstrip("/")
     if os.environ.get("MSP_EXTERNAL_BASE_URL", "").strip() or EDGE_DOMAIN:
-        return EXTERNAL_BASE_URL
+        return external_base_url()
     return str(request.base_url).rstrip("/")
 
 

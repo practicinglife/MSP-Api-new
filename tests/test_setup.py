@@ -35,6 +35,7 @@ def test_first_admin(app_client, db_factory) -> None:  # type: ignore[no-untyped
     assert app_client.post("/setup/admin", json={**body, "username": "Bad Name!"}).status_code == 400
     step1 = app_client.post("/setup/admin", json=body).json()
     assert step1["step"] == "authenticator" and step1["totp_uri"].startswith("otpauth://totp/")
+    assert step1["totp_qr"].startswith("data:image/svg+xml")  # drawn locally, no outside QR service
     assert _users(db_factory) == []  # nothing saved until the authenticator is proven
 
     wrong = app_client.post("/setup/admin", json={**body, "totp_secret": step1["totp_secret"], "totp_code": "000000"})
@@ -43,7 +44,7 @@ def test_first_admin(app_client, db_factory) -> None:  # type: ignore[no-untyped
                                                  "totp_code": totp_now(step1["totp_secret"])}).json()
     assert done["step"] == "done"
     [user] = _users(db_factory)
-    assert user.username == "admin" and "MSPTools.Admin" in user.roles and user.password_hash.startswith("scrypt$")
+    assert user.username == "admin" and user.roles == ["Admin"] and user.password_hash.startswith("scrypt$")
 
     assert app_client.get("/setup/status").json() == {"needs_setup": False}
     again = app_client.post("/setup/admin", json=body)
@@ -84,3 +85,49 @@ def test_checklist_is_for_admins(app_client, db_factory) -> None:  # type: ignor
     assert items["https"]["ok"] is False  # the test client talks plain http
     assert "msp" in items["packs"]["detail"]
     assert c["needs_attention"] >= 1
+
+
+def test_sign_in_page_sends_a_fresh_install_to_setup(app_client):  # type: ignore[no-untyped-def]
+    r = app_client.get("/auth/local", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "/setup"
+
+
+def test_first_question_saves_the_pack_choice(app_client, db_factory, tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    from tests.conftest import ADMIN_ROLES, make_session
+
+    monkeypatch.delenv("MSP_PACKS")
+    monkeypatch.setenv("MSP_DATA_DIR", str(tmp_path))
+    app_client.cookies.set("msp_session", make_session(db_factory, ADMIN_ROLES))
+    assert app_client.get("/api/admin/getting-started").json()["step"] == "secure"
+    app_client.post("/api/admin/secure/step", json={"mode": "local"})
+    gs = app_client.get("/api/admin/getting-started").json()
+    assert gs["step"] == "choose" and not gs["chosen"]
+
+    r = app_client.post("/api/admin/packs", json={"packs": []})
+    # Not running under `app.cli run` here, so the rebuild has to be done by hand
+    assert r.status_code == 200 and r.json() == {"packs": [], "restart": "manual"}
+    assert (tmp_path / "settings.json").exists()
+    assert app_client.get("/api/admin/getting-started").json()["chosen"]
+    assert app_client.post("/api/admin/packs", json={"packs": ["nope"]}).status_code == 400
+
+    from app import packs
+
+    assert packs.configured() == []
+    monkeypatch.setenv("MSP_PACKS", "msp")  # .env decides
+    assert app_client.post("/api/admin/packs", json={"packs": []}).status_code == 409
+
+
+def test_restart_handler_is_used_when_running_locally(app_client, db_factory, tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    from app import runtime
+    from tests.conftest import ADMIN_ROLES, make_session
+
+    monkeypatch.delenv("MSP_PACKS")
+    monkeypatch.setenv("MSP_DATA_DIR", str(tmp_path))
+    app_client.cookies.set("msp_session", make_session(db_factory, ADMIN_ROLES))
+    called = []
+    runtime.set_restart_handler(lambda: called.append(True))
+    try:
+        r = app_client.post("/api/admin/packs", json={"packs": []})
+    finally:
+        runtime.set_restart_handler(None)
+    assert r.json()["restart"] == "automatic" and called == [True]

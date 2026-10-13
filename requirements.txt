@@ -14,6 +14,8 @@ pyyaml>=6.0
 weasyprint>=62.0
 jinja2>=3.1.4
 cryptography>=42.0
+segno>=1.6  # authenticator QR codes, drawn locally
+acme>=4.0  # Let's Encrypt certificates from Get started (DNS-01)
 PyJWT[crypto]>=2.8
 # Phase 2 - import any API: validation, GraphQL, SOAP/WSDL, safe XML (OData $metadata, WSDL)
 jsonschema>=4.21

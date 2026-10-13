@@ -11,7 +11,7 @@ registry client / PSA company, and builds ONE change that:
 4. **only if SentinelOne reports the threat mitigated**: resolves the incident in SentinelOne (with a note), closes
    the ticket and logs a note on the PSA company. Otherwise the ticket stays open under the company for a tech.
 
-Every run is a change request (Editor submits, Approver approves).
+Every run is a change request (an Editor submits, an Approver approves).
 """
 
 from __future__ import annotations

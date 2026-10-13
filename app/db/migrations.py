@@ -2,8 +2,9 @@
 
 * **New database** → every migration from the baseline (``0001_baseline``) up.
 * **Database from before migrations existed** (tables made by ``create_all`` + ad-hoc repairs): the old repairs
-  run once to bring it to the baseline shape, it is stamped as the baseline, then later migrations apply.
-  No data is dropped.
+  run once. They build every missing table and column from the current models, so the database is then at
+  the latest shape and is stamped as head (stamping the baseline would make later migrations re-create what
+  the repair just built). No data is dropped.
 * **Up-to-date database** → nothing to do.
 
 Changing a model means adding a migration: ``alembic revision --autogenerate -m "what changed"`` (run with
@@ -54,9 +55,9 @@ def _upgrade_sync(sync_conn: Any) -> dict[str, Any]:
     current = _current(sync_conn) if "alembic_version" in tables else None
     adopted = False
     if current not in known and tables & set(Base.metadata.tables):
-        # Made before migrations (or by an old, unrelated revision): repair to the baseline, then record it.
+        # Made before migrations (or by an old, unrelated revision): repair to the current models, record head.
         legacy_repair(sync_conn)
-        command.stamp(config(sync_conn), BASELINE, purge=True)
+        command.stamp(config(sync_conn), "head", purge=True)
         adopted = True
         log.info("db.migrate.adopted_existing_database", previous=current)
     command.upgrade(config(sync_conn), "head")

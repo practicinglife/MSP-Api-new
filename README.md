@@ -35,7 +35,7 @@ thousands of endpoints usable. `/mcp` is a hub across everything. OAuth tokens a
 searched instantly by people and AI clients without calling the API.
 
 **Safe writes.** Each API has a write mode: read-only (the default), direct, or approval, where every write
-becomes a change request that an Editor submits and an Approver approves.
+becomes a change request that an Editor submits, an Approver approves.
 
 **Security everywhere.** Every page and call needs a signed-in person, a connection key or an OAuth token,
 including on the LAN. The rest:
@@ -45,6 +45,18 @@ including on the LAN. The rest:
 - an outbound network guard
 - rate limits
 - an audit log of every write and every AI tool call
+
+## Quick start (this computer, no Docker)
+
+Python 3.12+:
+```bash
+pip install -r requirements.txt
+python -m app.cli run
+```
+It prints the address (`https://localhost`) and a setup code. Open it, enter the code, create your login (password + authenticator
+QR code), and the **Get started** wizard walks you through connecting your tools, the first sync and matching company names.
+With no `.env` it uses SQLite and a generated encryption key in `data/` (back that folder up, keep `data/master.key` secret)
+and a local HTTPS certificate in `certs/`. Use Docker and PostgreSQL below for a shared server.
 
 ## Quick start (Docker)
 
@@ -101,6 +113,16 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest
 ruff check app tests
 ```
+**Local HTTPS.** Run the app on this machine at `https://localhost`:
+```bash
+python -m app.cli make-certs                # local CA (once) + certificate for localhost, in certs/ (git-ignored)
+certutil -user -addstore Root certs\ca.crt  # Windows: trust the CA once (confirm the prompt)
+```
+Set `MSP_EXTERNAL_BASE_URL=https://localhost`, then
+`uvicorn app.main:app --host 127.0.0.1 --port 443 --ssl-certfile certs/server.crt --ssl-keyfile certs/server.key`.
+For Microsoft 365 sign-in, add `https://localhost/auth/callback` as a redirect URI on the Entra app
+registration. Re-run `make-certs --name <host>` to add names; it keeps the same CA.
+
 Schema changes need a migration: `alembic revision --autogenerate -m "what changed"`
 (`tests/test_migrations.py` fails until there is one).
 

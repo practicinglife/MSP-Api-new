@@ -210,6 +210,12 @@ async def proxy_request(
         except Exception:
             body = None
 
+    return await vendor_request(platform, method, path, params, body)
+
+
+async def vendor_request(platform: str, method: str, path: str, params: dict | None, body: Any) -> dict[str, Any]:
+    """Call a built-in platform's API with that platform's own sign-in. The caller enforces write rules
+    (the proxy route above, or the connection call path for built-in connections)."""
     # CW PSA — route through cwm_gateway for correct auth
     if platform == "connectwise_psa":
         return await _proxy_cwm(method, path, params, body)

@@ -11,7 +11,7 @@ For any request needing more than one or two tool calls: `find_workflow("<reques
 | Match kind | Use it with | Notes |
 |---|---|---|
 | recipe | `run_recipe(name, params)` | read-only, immediate; follow its `how_to_present` |
-| playbook / command | `propose_change(name, params)` (`describe_command` for params) | a change: Editor submits, an Approver approves |
+| playbook / command | `propose_change(name, params)` (`describe_command` for params) | a change: an Editor submits, an Approver approves |
 | skill | `get_skill(name)` and follow it | how we do things |
 
 Browse everything: `find_workflow()` with no query, or the page `/library` on the MSP Tools server.
@@ -26,7 +26,7 @@ Pick the kind:
   request needs a vendor ability no command has, say a new command is needed (developer work) instead.
 - **Skill** — knowledge/judgment: when to do what, rules, gotchas.
 
-Save with `save_workflow(kind, name, content)` → returns an approval link (Editor submits, an Approver approves).
+Save with `save_workflow(kind, name, content)` → returns an approval link (an Editor submits, an Approver approves).
 It's validated before proposing; fix and retry if refused. To change an existing one, save the full new
 content under the same name (the preview shows the diff). `delete: true` removes it.
 

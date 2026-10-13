@@ -1,6 +1,6 @@
 """save_workflow: add, update or remove a recipe, playbook or skill in the org library — as a change request.
 
-Saving goes through the same gates as any vendor change (Editor submits, an Approver approves), and the approval is
+Saving goes through the same gates as any vendor change (an Editor submits, an Approver approves), and the approval is
 bound to the exact text. Content is validated before it can even be proposed:
 
 * playbook — YAML; every step is an existing (non-playbook) command, so a playbook can never add a new kind of
@@ -114,7 +114,7 @@ async def plan_save_workflow(p: dict[str, Any]) -> Plan:
                                             "current", "proposed", n=1))
         warnings.append("Changes vs current:\n" + (diff[:4000] + ("\n…" if len(diff) > 4000 else "")))
     if kind == "playbook":
-        warnings.append("Saving only adds the template — every run is still its own change for Editor + Approver.")
+        warnings.append("Saving only adds the template — every run is still its own change for an Editor and an Approver.")
     step = {"kind": "local", "action": "library_write",
             "description": f"{'Update' if current is not None else 'Add'} {label} — live for everyone right after",
             "args": {"kind": kind, "name": name, "content": content}, "before": current,

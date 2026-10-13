@@ -85,6 +85,53 @@ async def create_connection(body: ConnectionBody, dry_run: bool = False) -> Any:
         return _error(exc)
 
 
+# ── Templates and the public API directory (declared before /{slug}) ─────────────────────────────────────
+
+
+@router.get("/templates")
+async def list_templates(q: str = "", category: str = "") -> dict[str, Any]:
+    """Well-known APIs that connect with only your credentials (app/connection_templates/templates.yaml)."""
+    from app.services import connection_templates as ct
+
+    return {"categories": ct.CATEGORIES, "templates": ct.search(q, category)}
+
+
+class FromTemplateBody(BaseModel):
+    template: str
+    name: str = ""
+    values: dict[str, Any] = {}
+    auth: dict[str, Any] | None = None  # only for templates whose sign-in is read from the definition
+
+
+@router.post("/from-template")
+async def create_from_template(body: FromTemplateBody, dry_run: bool = False) -> Any:
+    """Preview (``dry_run``) or save a connection from a template; saving pins the template's suggested tools."""
+    from app.services import connection_templates as ct
+
+    try:
+        conn_body = ct.build_body(body.template, body.values, body.name, body.auth)
+        if not dry_run:
+            conn_body["slug"] = await service.free_slug(conn_body.get("slug") or service.slugify(conn_body["name"]))
+        result = await service.create_connection(conn_body, _actor(), dry_run=dry_run)
+        if not dry_run:
+            await service.flag_by_path(result["slug"], ct.read_only(body.template), "read_only", _actor())
+            result["pinned"] = await service.pin_by_path(result["slug"], ct.suggested(body.template), _actor())
+        return result
+    except (ct.TemplateError, SourceError, CallError, ValueError) as exc:
+        return _error(exc)
+
+
+@router.get("/directory")
+async def search_directory(q: str = "", limit: int = Query(30, ge=1, le=100)) -> Any:
+    """Search ~2,500 public APIs (APIs.guru) — for anything without a template."""
+    from app.services import api_directory
+
+    try:
+        return {"query": q, "results": await api_directory.search(q, limit)}
+    except api_directory.DirectoryUnavailable as exc:
+        return JSONResponse({"detail": str(exc)}, 503)
+
+
 @router.get("/{slug}")
 async def get_connection(slug: str) -> Any:
     try:

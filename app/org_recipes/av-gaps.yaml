@@ -17,5 +17,5 @@ present: |
   day and offer to refresh at /av-review). Then per client (most gaps first): expected AV, and the machines with
   status, what was found, online/last contact, and review status. Skip stale machines unless asked.
   Next steps: flag for review → propose_change('av_flag_for_review', {client_codes: [...]}) ; redeploy one client →
-  propose_change('av_remediate', {client_code}). Both are changes (Editor submits, an Approver approves).
+  propose_change('av_remediate', {client_code}). Both are changes (an Editor submits, an Approver approves).
   Clients under fix_client_av need exactly one AV linked in the registry first.

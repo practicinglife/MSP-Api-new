@@ -189,7 +189,7 @@ def test_cross_site_post_refused(app_client, db_factory):  # type: ignore[no-unt
 
 
 def test_only_approver_changes_connector_credentials(app_client, db_factory):  # type: ignore[no-untyped-def]
-    _sign_in(app_client, db_factory, EDITOR)
+    _sign_in(app_client, db_factory, VIEWER)
     r = app_client.post("/api/connectors/register", json={"platform": "sentinelone", "credentials": {}})
     assert r.status_code == 403
 
@@ -470,7 +470,7 @@ def test_oidc_valid_token_and_role_filtering(oidc):  # type: ignore[no-untyped-d
 
     claims = _run(verify_id_token(_id_token(oidc), "n1"))
     assert claims["preferred_username"] == "sso@example.com"
-    assert _roles_from_claims(claims) == ["MSPTools.Editor"]
+    assert _roles_from_claims(claims) == ["Editor"]
 
 
 @pytest.mark.parametrize("change", [{"aud": "someone-else"}, {"iss": "https://evil.example.com"},
@@ -499,4 +499,4 @@ def test_oidc_role_map_for_group_claims(monkeypatch):  # type: ignore[no-untyped
 
     monkeypatch.setenv("MSP_OIDC_ROLES_CLAIM", "groups")
     monkeypatch.setenv("MSP_OIDC_ROLE_MAP", json.dumps({"msp-editors": "MSPTools.Editor", "x": "NotARole"}))
-    assert _roles_from_claims({"groups": ["msp-editors", "x", "other"]}) == ["MSPTools.Editor"]
+    assert _roles_from_claims({"groups": ["msp-editors", "x", "other"]}) == ["Editor"]

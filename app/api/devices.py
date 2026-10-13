@@ -972,7 +972,10 @@ async def scan_eset_connect_devices(
 
     from app.connectors.eset_connect import EsetConnectConnector
 
-    connector = EsetConnectConnector()
+    from app.services.builtin_integrations import detail_connector
+
+    # Credentials saved in the app first, then .env
+    connector = await detail_connector("eset_connect") or EsetConnectConnector()
 
     missing = connector.check_config()
     if missing:

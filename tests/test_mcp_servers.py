@@ -245,7 +245,9 @@ def test_unauthenticated_mcp_points_at_its_own_oauth_metadata(app_client, db_fac
     browser = app_client.get("/mcp/petstore", headers={"Accept": "text/html"}, follow_redirects=False)
     assert browser.status_code == 401  # MCP clients get 401 + metadata, never a login redirect
 
-    from app.api.external_auth import EXTERNAL_BASE
+    from app.org_profile import external_base_url
+
+    EXTERNAL_BASE = external_base_url()
 
     meta = app_client.get("/.well-known/oauth-protected-resource/mcp/petstore").json()
     assert meta["resource"] == f"{EXTERNAL_BASE}/mcp/petstore" and meta["authorization_servers"] == [EXTERNAL_BASE]
@@ -272,7 +274,10 @@ def _token(factory, resource: str) -> str:  # type: ignore[no-untyped-def]
 
 
 def test_oauth_token_is_bound_to_one_server(app_client, db_factory) -> None:  # type: ignore[no-untyped-def]
-    from app.api.external_auth import EXTERNAL_BASE, resource_allowed
+    from app.api.external_auth import resource_allowed
+    from app.org_profile import external_base_url
+
+    EXTERNAL_BASE = external_base_url()
 
     app_client.cookies.set("msp_session", make_session(db_factory, ADMIN_ROLES, "admin@example.com"))
     _setup(app_client)
@@ -296,7 +301,9 @@ def test_oauth_token_is_bound_to_one_server(app_client, db_factory) -> None:  # 
 
 
 def test_oauth_consent_page_names_the_server(app_client, db_factory) -> None:  # type: ignore[no-untyped-def]
-    from app.api.external_auth import EXTERNAL_BASE
+    from app.org_profile import external_base_url
+
+    EXTERNAL_BASE = external_base_url()
 
     reg = app_client.post("/oauth/register", json={"redirect_uris": ["http://localhost:3333/cb"]}).json()
     params = {"response_type": "code", "client_id": reg["client_id"], "redirect_uri": "http://localhost:3333/cb",

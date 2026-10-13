@@ -1,6 +1,6 @@
 """New client onboarding: duplicate/availability check + the form page (/onboard).
 
-The form proposes one ``onboard_client`` change; an Editor submits it and the Approver gives final approval.
+The form proposes one ``onboard_client`` change; an Editor submits it and an Approver approves it.
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ button:disabled{opacity:.5;cursor:default}.bar{display:flex;justify-content:spac
 const $=id=>document.getElementById(id);let CHK=null;
 const ROWS=[['workstations','Managed workstations',true],['servers','Managed servers',true],['network','Managed network (0 or 1)',true],['sc_clients','ScreenConnect clients',true],['av','Antivirus seats',true]];
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function who(){const m=await (await fetch('/auth/me')).json();$('who').innerHTML=m.signed_in?esc(m.name)+' · '+esc((m.roles||[]).join(', ')):(m.configured?'<a href="/auth/login?next=/onboard">Sign in with Microsoft 365</a>':'')}
+async function who(){const m=await (await fetch('/auth/me')).json();$('who').innerHTML=m.signed_in?esc(m.name)+' · '+esc((m.roles||[]).map(r=>r.replace('MSPTools.','')).join(', ')):(m.configured?'<a href="/auth/login?next=/onboard">Sign in with Microsoft 365</a>':'')}
 let CAT={catalog_prices:{},lines:{}};
 function avVendor(){return $('av_s1').checked?'sentinelone':($('av_eset').checked?'eset':'')}
 function lineKey(k){return k==='av'?avVendor():k}

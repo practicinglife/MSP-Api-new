@@ -16,6 +16,30 @@ and the connection's write mode.
 | `mongodb` | connection string (needs `pymongo`) | `list_collections`, `sample_documents`, `find`, `count_documents`, `aggregate` (read-only) |
 | `mcp` | another MCP server's URL (streamable HTTP) as the base URL | that server's tools, behind this app's auth and audit |
 
+## The quick way: templates, the public directory, a settings file
+
+On Connections (and in Get started) **Add a connection** opens a picker:
+
+- **Templates**: about 30 well-known APIs: Microsoft 365 (Graph), Autotask, Halo PSA, NinjaOne, IT Glue,
+  Hudu, Huntress, Pax8, Meraki, Auvik, KnowBe4, Stripe, HubSpot, Salesforce, Xero, Shopify, Zendesk, Freshdesk,
+  GitHub, GitLab, Jira, Confluence, Slack, Notion, Asana, Trello, PostgreSQL, SQL Server, MySQL, MongoDB, any OpenAPI
+  link, another MCP server. Pick one and fill in only its fields: each says where to get the key. **Test** previews it,
+  **Save** stores it encrypted and pins the most useful operations as tools. Templates are in
+  `app/connection_templates/templates.yaml`. Vendors without a published definition get a small "starter" in
+  `app/connection_templates/specs/`. `python -m app.cli check-templates` loads every template's definition live.
+- **Public directory**: search about 2,500 public APIs from [APIs.guru](https://apis.guru). The sign-in each one
+  needs is read from its definition. The list is downloaded on first use and cached for a day in `data/`. Set
+  `MSP_API_DIRECTORY=off` to turn it off.
+- **Custom**: the full form below, for any kind and any sign-in.
+- **Import file**: connections exported from another install with **Export settings** (Approver). The file holds
+  kinds, definitions, addresses, sign-in types, write modes, pinned tools and groups, but never secrets. After
+  importing, add credentials from each connection's **Credentials** button. SQL, MongoDB, GraphQL and MCP connections
+  need their credentials just to be read, so add those again with a template.
+
+API: `GET /api/connections/templates`, `POST /api/connections/from-template?dry_run=true`
+`{template, name, values}`, `GET /api/connections/directory?q=`, `GET /api/admin/connections/export`,
+`POST /api/admin/connections/import?dry_run=true`.
+
 ## Create a connection (API)
 
 Preview first with `?dry_run=true`: you see how many operations it found, the base URL, which auth the

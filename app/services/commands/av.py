@@ -1,4 +1,4 @@
-"""Antivirus gap commands — every step is a change request (Editor submits, an Approver approves).
+"""Antivirus gap commands — every step is a change request (an Editor submits, an Approver approves).
 
 * ``av_flag_for_review`` — put machines missing their antivirus into the Asio review group (custom field), for one
   client, several, or all at once.

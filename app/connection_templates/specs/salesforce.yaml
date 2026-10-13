@@ -1,0 +1,79 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: Salesforce REST API
+  version: starter
+  description: 'Starter definition: SOQL queries, object lists and descriptions, limits.
+    Made for API Tools connection templates; re-import a fuller definition if the
+    vendor publishes one.'
+paths:
+  /services/data/v60.0/query:
+    get:
+      operationId: query
+      summary: Run a SOQL query
+      parameters:
+      - name: q
+        in: query
+        required: true
+        description: SOQL, e.g. SELECT Id, Name FROM Account LIMIT 10
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /services/data/v60.0/sobjects:
+    get:
+      operationId: listObjects
+      summary: List objects
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /services/data/v60.0/sobjects/{sobject}/describe:
+    get:
+      operationId: describeObject
+      summary: Describe an object's fields
+      parameters:
+      - name: sobject
+        in: path
+        required: true
+        description: e.g. Account
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /services/data/v60.0/sobjects/{sobject}/{id}:
+    get:
+      operationId: getRecord
+      summary: Get a record
+      parameters:
+      - name: sobject
+        in: path
+        required: true
+        description: e.g. Account
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: Record ID
+        schema:
+          type: string
+      - name: fields
+        in: query
+        required: false
+        description: Fields, comma separated
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /services/data/v60.0/limits:
+    get:
+      operationId: getLimits
+      summary: API limits
+      parameters: []
+      responses:
+        '200':
+          description: OK

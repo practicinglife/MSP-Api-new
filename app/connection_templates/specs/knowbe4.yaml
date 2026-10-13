@@ -1,0 +1,93 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: KnowBe4 Reporting API
+  version: starter
+  description: 'Starter definition: account, users, groups, phishing and training
+    campaigns. Made for API Tools connection templates; re-import a fuller definition
+    if the vendor publishes one.'
+paths:
+  /account:
+    get:
+      operationId: getAccount
+      summary: Get account and subscription
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      parameters:
+      - name: status
+        in: query
+        required: false
+        description: active or archived
+        schema:
+          type: string
+      - name: group_id
+        in: query
+        required: false
+        description: Group ID
+        schema:
+          type: integer
+      - &id001
+        name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - &id002
+        name: per_page
+        in: query
+        required: false
+        description: Results per page
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /groups:
+    get:
+      operationId: listGroups
+      summary: List groups
+      parameters:
+      - name: status
+        in: query
+        required: false
+        description: active or archived
+        schema:
+          type: string
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /phishing/campaigns:
+    get:
+      operationId: listPhishingCampaigns
+      summary: List phishing campaigns
+      parameters: &id003
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /phishing/security_tests:
+    get:
+      operationId: listSecurityTests
+      summary: List phishing security tests
+      parameters: *id003
+      responses:
+        '200':
+          description: OK
+  /training/campaigns:
+    get:
+      operationId: listTrainingCampaigns
+      summary: List training campaigns
+      parameters: *id003
+      responses:
+        '200':
+          description: OK

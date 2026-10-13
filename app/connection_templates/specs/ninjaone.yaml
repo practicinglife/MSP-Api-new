@@ -1,0 +1,113 @@
+# Starter definition for API Tools connection templates (common read endpoints).
+openapi: 3.0.3
+info:
+  title: NinjaOne Public API v2
+  version: starter
+  description: 'Starter definition: organizations, devices and alerts. Made for API
+    Tools connection templates; re-import a fuller definition if the vendor publishes
+    one.'
+paths:
+  /v2/organizations:
+    get:
+      operationId: listOrganizations
+      summary: List organizations
+      parameters:
+      - &id001
+        name: pageSize
+        in: query
+        required: false
+        description: Results per page
+        schema:
+          type: integer
+      - &id002
+        name: after
+        in: query
+        required: false
+        description: Return results after this ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /v2/organization/{id}/devices:
+    get:
+      operationId: listOrganizationDevices
+      summary: List an organization's devices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Organization ID
+        schema:
+          type: integer
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /v2/devices:
+    get:
+      operationId: listDevices
+      summary: List devices
+      parameters:
+      - name: df
+        in: query
+        required: false
+        description: Device filter, e.g. org = 1
+        schema:
+          type: string
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /v2/devices-detailed:
+    get:
+      operationId: listDevicesDetailed
+      summary: List devices with details
+      parameters:
+      - name: df
+        in: query
+        required: false
+        description: Device filter
+        schema:
+          type: string
+      - *id001
+      - *id002
+      responses:
+        '200':
+          description: OK
+  /v2/device/{id}:
+    get:
+      operationId: getDevice
+      summary: Get a device
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Device ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+  /v2/alerts:
+    get:
+      operationId: listAlerts
+      summary: List active alerts
+      parameters:
+      - name: sourceType
+        in: query
+        required: false
+        description: Alert source type
+        schema:
+          type: string
+      - name: df
+        in: query
+        required: false
+        description: Device filter
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK

@@ -36,6 +36,14 @@ EDGE_DOMAIN = _env("MSP_EDGE_DOMAIN").lower()
 EXTERNAL_BASE_URL = (
     _env("MSP_EXTERNAL_BASE_URL") or (f"https://{EDGE_DOMAIN}" if EDGE_DOMAIN else "http://localhost:8000")
 ).rstrip("/")
+
+
+def external_base_url() -> str:
+    """The public URL, read now (the Get started wizard can change it while the app runs)."""
+    edge = _env("MSP_EDGE_DOMAIN").lower()
+    return (_env("MSP_EXTERNAL_BASE_URL") or (f"https://{edge}" if edge else "http://localhost:8000")).rstrip("/")
+
+
 # Office public IPs that count as "internal" when they arrive through the edge.
 OFFICE_IPS = set(_list("MSP_OFFICE_IPS"))
 # Mailbox new SentinelOne sites / ESET companies send alerts to.

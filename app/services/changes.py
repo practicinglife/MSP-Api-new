@@ -1,4 +1,4 @@
-"""Change engine: propose → submit (Editor) → final approval (Approver) → execute.
+"""Change engine: propose (anyone) → submit (Editor) → final approval (Approver) → execute.
 
 Nothing reaches a vendor until the Approver approves. ``execute`` is private to ``final_approve``.
 Approval is bound to a hash of the exact requests; every "before" snapshot is re-read just before

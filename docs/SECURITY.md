@@ -16,7 +16,7 @@ data.
   - Browser sessions use secure, HTTP-only cookies; cross-site form posts are refused.
 - **Programs and AI clients** use a **connection key** (`msp_…`):
   - 256 random bits, stored only as a hash, shown once
-  - carries a role (User or Editor, never Approver or Admin) and scopes (`<api>:read|write`)
+  - carries a role (Reader or Editor, never Approver or Admin) and scopes (`<api>:read|write`)
   - can have an expiry date; revoking a key also kills every OAuth token issued from it
 - **claude.ai connectors** use **OAuth 2.1**: PKCE, single-use codes, 1-hour access tokens and rotating refresh
   tokens, with only Claude, VS Code and loopback redirect addresses allowed. A token is bound to **one MCP
@@ -26,8 +26,10 @@ data.
   to read it.
 
 ## What they can do
-- **Roles:** User (read, propose) → Editor (write where allowed) → Approver (approve changes, manage
-  connections and credentials) → Admin (keys, write modes, audit log).
+- **Roles:** Reader (read, call read-only operations, propose) → Editor (writes where the write mode allows,
+  submit changes) → Approver (final approval; manage connections, credentials and write modes) → Admin (users,
+  keys, sign-in, certificates, packs, audit log). Each includes the one before it; the full table is in
+  INSTALL.md and in Get started.
 - **Scopes** on keys and tokens limit which APIs a caller can see at all. That includes searches, MCP servers,
   the hub and stored local copies.
 - **Write modes** per API:

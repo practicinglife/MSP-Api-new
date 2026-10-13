@@ -1,7 +1,7 @@
 """Change requests API + pages.
 
 * Propose: anyone (dashboard, MCP/Claude, workflows) — ``POST /api/changes``
-* Submit: Microsoft 365 user with ``MSPTools.Editor`` — ``POST /api/changes/{id}/submit``
+* Submit: an Editor (signed in) — ``POST /api/changes/{id}/submit``
 * Final approval: ``MSPTools.Approver`` only — ``POST /api/changes/{id}/approve`` (the only path that executes)
 """
 
@@ -15,13 +15,14 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from app.api.auth_m365 import (
-    EXTERNAL_BASE,
     ROLE_APPROVER,
     ROLE_EDITOR,
     check_csrf,
+    has_role,
     require_role,
 )
 from app.auth.principal import get_current
+from app.org_profile import external_base_url
 from app.services import changes as svc
 from app.services.commands import CommandError, get_command, list_commands
 
@@ -74,14 +75,14 @@ async def propose(request: Request, body: ProposeBody) -> dict[str, Any]:
         c = await svc.propose(body.command, body.params, source=source, requested_by=who)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return {**svc.detail(c, [], EXTERNAL_BASE),
+    return {**svc.detail(c, [], external_base_url()),
             "next": "An Editor must sign in and submit it, then an Approver gives final approval at the url."}
 
 
 @router.get("/api/changes")
 async def list_(status: str | None = None, limit: int = 100) -> dict[str, Any]:
     rows = await svc.list_changes(status, min(limit, 500))
-    return {"count": len(rows), "changes": [svc.summarize(c, EXTERNAL_BASE) for c in rows]}
+    return {"count": len(rows), "changes": [svc.summarize(c, external_base_url()) for c in rows]}
 
 
 @router.get("/api/changes/{change_id}")
@@ -90,7 +91,7 @@ async def get_(change_id: str) -> dict[str, Any]:
         c, events = await svc.get(change_id)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return svc.detail(c, events, EXTERNAL_BASE)
+    return svc.detail(c, events, external_base_url())
 
 
 @router.post("/api/changes/{change_id}/submit")
@@ -101,7 +102,7 @@ async def submit(request: Request, change_id: str, body: SubmitBody) -> dict[str
         c = await svc.submit(change_id, editor=s.upn, typed_confirmation=body.confirmation)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return svc.summarize(c, EXTERNAL_BASE)
+    return svc.summarize(c, external_base_url())
 
 
 @router.post("/api/changes/{change_id}/approve")
@@ -112,7 +113,7 @@ async def approve(request: Request, change_id: str) -> dict[str, Any]:
         c = await svc.final_approve(change_id, approver=s.upn)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return {**svc.summarize(c, EXTERNAL_BASE), "results": c.results}
+    return {**svc.summarize(c, external_base_url()), "results": c.results}
 
 
 @router.post("/api/changes/{change_id}/reject")
@@ -121,12 +122,12 @@ async def reject(request: Request, change_id: str, body: RejectBody) -> dict[str
     check_csrf(request, s)
     try:
         c, _ = await svc.get(change_id)
-        if c.status == "awaiting_final_approval" and ROLE_APPROVER not in (s.roles or []):
+        if c.status == "awaiting_final_approval" and not has_role(s, ROLE_APPROVER):
             raise svc.ChangeError("Only the Approver can reject a change awaiting final approval", 403)
         c = await svc.reject(change_id, actor=s.upn, reason=body.reason)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return svc.summarize(c, EXTERNAL_BASE)
+    return svc.summarize(c, external_base_url())
 
 
 @router.post("/api/changes/{change_id}/cancel")
@@ -136,7 +137,7 @@ async def cancel(request: Request, change_id: str) -> dict[str, Any]:
         c = await svc.cancel(change_id, actor=who)
     except svc.ChangeError as exc:
         raise _err(exc) from exc
-    return svc.summarize(c, EXTERNAL_BASE)
+    return svc.summarize(c, external_base_url())
 
 
 # ── Pages ─────────────────────────────────────────────────────────────────
@@ -172,7 +173,7 @@ function badge(r){return `<span class="b ${esc(r)}">${esc(r)}</span>`}
 async function who(){const m=await me();const el=document.getElementById('who');
  if(!m.signed_in){el.innerHTML=m.configured?`<a href="/auth/login?next=${encodeURIComponent(location.pathname)}">Sign in with Microsoft 365</a>`
  :'<span class="warn">Microsoft 365 sign-in not configured yet</span>';return m}
- el.innerHTML=`${esc(m.name)} · ${esc((m.roles||[]).join(', '))} · <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>`;return m}
+ el.innerHTML=`${esc(m.name)} · ${esc((m.roles||[]).map(r=>r.replace('MSPTools.','')).join(', '))} · <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>`;return m}
 """
 
 
@@ -218,8 +219,7 @@ function stepHtml(s,i,res){const req=s.kind==='http'?`${s.method} ${s.platform} 
    <details><summary class="m">Response</summary><pre>${esc(JSON.stringify(res.response,null,2))}</pre></details>`:''}</td></tr>`}
 async function load(){ME=await who();const c=await (await fetch(`/api/changes/${CID}`)).json();
  if(c.detail){document.getElementById('c').innerHTML=`<p class="bad">${esc(c.detail)}</p>`;return}
- const roles=ME.roles||[];const isEd=roles.includes('MSPTools.Editor')||roles.includes('MSPTools.Approver');
- const isAp=roles.includes('MSPTools.Approver');let actions='';
+ const roles=ME.roles||[];const isAp=roles.includes('Approver')||roles.includes('Admin');const isEd=isAp||roles.includes('Editor');let actions='';
  if(c.status==='proposed'&&isEd){actions=`<div class="card"><b>Submit for final approval</b><div class="m">You confirm this preview is correct. Nothing runs until an Approver approves.</div>
   ${c.risk==='delete'?'<p class="bad">This removes or decommissions something. Type DELETE to confirm.</p><input id="conf" placeholder="DELETE">':''}
   <div class="row" style="margin-top:8px"><button class="primary" onclick="act('submit',{confirmation:(document.getElementById('conf')||{}).value||''})">Submit</button>

@@ -89,7 +89,7 @@ async def enforce_direct_write(platform: str) -> None:
     if mode == APPROVAL:
         raise HTTPException(409, f"{platform} requires approval for changes — propose a change request instead "
                                  "(POST /api/changes or the propose_change MCP tool)")
-    raise HTTPException(403, f"{platform} is read-only. An admin can change its write mode.")
+    raise HTTPException(403, f"{platform} is read-only. An Approver can change its write mode.")
 
 
 async def enforce_change_execution(platform: str) -> None:

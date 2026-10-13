@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.companies import _get_session
+from app.api.companies import _get_session, company_reconciled
 from app.api.db_query import db_company as _db_company
 from app.services.reports import (
     build_company_report_context,

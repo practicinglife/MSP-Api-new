@@ -1,0 +1,613 @@
+# Connection templates: well-known APIs, ready to connect with only your credentials.
+#
+# Each entry becomes a POST /api/connections body (app/services/connection_templates.py → build_body):
+#   kind          connection kind (openapi, graphql, sql, mongodb, mcp, …)
+#   source        {url: …} a public definition, {file: specs/…} a starter bundled here, or {} (introspection, sql …)
+#   base_url      where calls go
+#   auth          {type: …, <field>: "…"} — values are templates filled from `fields`, e.g. "{email}/token"
+#   extra_headers fixed headers sent on every call (templates too; empty values are dropped)
+#   dsn           connection string template (sql / mongodb); values are URL-encoded into it
+#   fields        what the person types: key, label, secret, required (default true), default, help, docs, placeholder
+#   suggested     operations pinned as their own MCP tools after saving: "METHOD /path"
+#   auth: {type: detect} — no fixed sign-in: the definition says (auth_hint) and the UI asks for that.
+# "{name}" anywhere is replaced by the value of field `name`. Spec URLs are checked with
+# `python -m app.cli check-templates` (live); starters under specs/ are small, hand-written definitions with the common
+# read endpoints — re-import a fuller definition later if the vendor publishes one.
+
+#   aliases       extra search words (other product names)
+#   slug          the connection's handle (default: from the name)
+#   builtin       the MSP pack's built-in integration for this tool: with the pack on, the picker opens that instead
+#   read_only     "METHOD /path" operations that only read although they aren't GET (e.g. ScreenConnect's POSTs)
+
+# ── MSP / IT ──────────────────────────────────────────────────────────────────────────────────────────────────
+- id: connectwise_psa
+  name: ConnectWise PSA
+  category: msp
+  aliases: [manage, connectwise manage, cw psa, psa]
+  description: Companies, contacts, tickets, configurations, agreements and time in ConnectWise PSA (Manage).
+  kind: openapi
+  slug: cw_psa
+  builtin: connectwise_psa
+  source: {file: ../specs/connectwise_psa.json}
+  base_url: https://{site}/v4_6_release/apis/3.0
+  auth: {type: basic, username: "{company_id}+{public_key}", password: "{private_key}"}
+  extra_headers: {clientId: "{client_id}"}
+  fields:
+    - {key: site, label: PSA site, default: na.myconnectwise.net, help: "na.myconnectwise.net, eu.myconnectwise.net, au.myconnectwise.net, or your own server"}
+    - {key: company_id, label: Company ID, help: "The company you sign in to PSA with"}
+    - {key: public_key, label: Public key, help: "System → Members → API Members → your API member → API Keys → Add"}
+    - {key: private_key, label: Private key, secret: true}
+    - {key: client_id, label: Client ID, help: "Register once at developer.connectwise.com → Client ID",
+       docs: "https://developer.connectwise.com/ClientID"}
+  suggested: ["GET /company/companies", "GET /service/tickets", "GET /company/configurations"]
+
+- id: connectwise_asio
+  name: ConnectWise Asio
+  category: msp
+  aliases: [platform, connectwise platform, asio platform, rmm, connectwise rmm]
+  description: Companies, sites, endpoints (devices), agents and tickets on the ConnectWise Asio platform.
+  kind: openapi
+  slug: cw_asio
+  builtin: asio
+  source: {file: ../specs/asio_partner.yaml}
+  base_url: "{api_url}"
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "{api_url}/v1/token", client_auth: json,
+         scope: "platform.companies.read platform.sites.read platform.devices.read platform.agent.read platform.asset.read platform.tickets.read"}
+  fields:
+    - {key: api_url, label: Platform address, default: "https://openapi.service.itsupport247.net",
+       help: "North America: openapi.service.itsupport247.net · EU: https://openapi.service.euplatform.connectwise.com · AU: https://openapi.service.auplatform.connectwise.com"}
+    - {key: client_id, label: Client ID, help: "Asio → Settings → API Clients (Integrations) → Add, with the read scopes you need"}
+    - {key: client_secret, label: Client secret, secret: true, docs: "https://developer.connectwise.com/Products/ConnectWise_Asio"}
+  suggested: ["GET /api/platform/v1/company/companies", "GET /api/platform/v1/company/sites",
+              "GET /api/platform/v2/device/endpoints/search", "GET /api/platform/v2/service/ticketing/tickets"]
+
+- id: screenconnect
+  name: ScreenConnect
+  category: msp
+  aliases: [control, connectwise control, screen connect, remote]
+  description: Find sessions and machines, read session details, add notes and run commands (RESTful API Manager extension).
+  kind: openapi
+  slug: cw_control
+  builtin: screenconnect
+  source: {file: specs/screenconnect.yaml}
+  base_url: "{instance_url}/App_Extensions/{extension_id}/Service.ashx"
+  auth: {type: headers, headers: {CTRLAuthHeader: "{auth_secret}"}}
+  extra_headers: {Origin: "{instance_url}"}
+  fields:
+    - {key: instance_url, label: Instance address, placeholder: "https://yourcompany.screenconnect.com"}
+    - {key: auth_secret, label: RESTful authentication secret, secret: true,
+       help: "Admin → Extensions → RESTful API Manager → Edit Settings → RESTfulAuthenticationSecret"}
+    - {key: extension_id, label: Extension ID, default: 2d558935-686a-4bd0-9991-07539f5fe749,
+       help: "Leave as is unless your RESTful API Manager extension has a different ID"}
+  read_only: ["POST /GetSessionsByFilter", "POST /GetSessionsByName", "POST /GetSessionBySessionID",
+              "POST /GetSessionDetailsBySessionID"]
+  suggested: ["POST /GetSessionsByFilter", "POST /GetSessionDetailsBySessionID"]
+
+- id: sentinelone
+  name: SentinelOne
+  category: msp
+  aliases: [s1, sentinel one, edr, singularity]
+  description: Accounts, sites, agents, threats, activities and exclusions in the SentinelOne console.
+  kind: openapi
+  slug: s1
+  builtin: sentinelone
+  source: {file: ../specs/sentinelone.json}
+  base_url: "{console_url}"
+  auth: {type: headers, headers: {Authorization: "ApiToken {api_token}"}}
+  fields:
+    - {key: console_url, label: Console address, placeholder: "https://usea1-yourcompany.sentinelone.net"}
+    - {key: api_token, label: API token, secret: true, help: "Settings → Users → Service Users → Create (Viewer role to start) → API token",
+       docs: "https://www.sentinelone.com/blog/feature-spotlight-sentinelone-api/"}
+  suggested: ["GET /web/api/v2.1/sites", "GET /web/api/v2.1/agents", "GET /web/api/v2.1/threats"]
+
+- id: eset_msp
+  name: ESET MSP Administrator
+  category: msp
+  aliases: [eset, ema, ema2, eset msp, msp administrator, eset licensing]
+  description: Companies, licences, sites and billing in ESET MSP Administrator 2 (EMA 2).
+  kind: openapi
+  slug: eset_msp
+  builtin: eset
+  source: {file: ../specs/eset.json}
+  base_url: "{api_url}"
+  auth: {type: token_login, username: "{username}", password: "{password}", login_url: "{api_url}/api/Token/Get"}
+  fields:
+    - {key: api_url, label: API address, default: "https://mspapi.eset.com"}
+    - {key: username, label: API user name, help: "EMA 2 → Users → an API user (create one with the API access option)"}
+    - {key: password, label: Password, secret: true, docs: "https://help.eset.com/ema2/en-US/api.html"}
+  # EMA 2 reads with POST: these only look things up or report
+  read_only: ["POST /api/Company/Detail", "POST /api/Company/Children", "POST /api/Company/Descendants",
+              "POST /api/Company/Users", "POST /api/Search/Companies", "POST /api/Search/Licenses", "POST /api/Search/Users",
+              "POST /api/License/Detail", "POST /api/License/GetHistory", "POST /api/License/GetPossibleProductChanges",
+              "POST /api/User/GetUserDetails", "POST /api/User/GetDirectAccessibleChildren",
+              "POST /api/BillingReport/MyCompany", "POST /api/BillingReport/MyCompanySelectedCompaniesOnly",
+              "POST /api/BillingReport/SingleManagedCompany", "POST /api/BillingReport/DivisionsUnderSelectedDistributor",
+              "POST /api/UsageReport/AllCompanies/products", "POST /api/UsageReport/SelectedCompanies/products",
+              "POST /api/UsageReport/Detailed/products", "POST /api/UsageReport/DetailedSelectedCompanies/products",
+              "POST /api/UsageReport/AllCompanies/categories", "POST /api/UsageReport/SelectedCompanies/categories",
+              "POST /api/UsageReport/Monthly/products", "POST /api/UsageReport/Monthly/categories",
+              "POST /api/UsageReport/Daily/products", "POST /api/UsageReport/Daily/categories"]
+  suggested: ["GET /api/User/Current", "POST /api/Company/Children", "POST /api/Search/Companies"]
+
+- id: eset_protect
+  name: ESET PROTECT
+  category: msp
+  aliases: [eset, eset connect, protect cloud, eset protect cloud, eset devices, antivirus]
+  description: Devices, device groups and installed ESET products in ESET PROTECT (ESET Connect API).
+  kind: openapi
+  slug: eset_protect
+  builtin: eset_connect
+  source: {file: ../specs/eset_connect_devices.json}
+  base_url: https://{region}.device-management.eset.systems
+  auth: {type: oauth2_password, username: "{username}", password: "{password}",
+         token_url: "https://{region}.business-account.iam.eset.systems/oauth/token"}
+  fields:
+    - {key: region, label: Region, default: us, help: "us, eu, de, ca or jpn: the region of your ESET PROTECT Hub / Business Account"}
+    - {key: username, label: API user email, help: "ESET PROTECT Hub / Business Account → Users → New user with Integrations (API) access"}
+    - {key: password, label: Password, secret: true, docs: "https://help.eset.com/eset_connect/en-US/"}
+  suggested: ["GET /v1/device_groups", "GET /v1/devices"]
+
+- id: microsoft_graph
+  name: Microsoft 365 (Graph)
+  category: msp
+  description: Users, groups, devices, licences, mail and Teams across a Microsoft 365 tenant.
+  kind: openapi
+  source: {url: "https://api.apis.guru/v2/specs/microsoft.com/graph/1.0.1/openapi.json"}
+  base_url: https://graph.microsoft.com/v1.0
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+         scope: "https://graph.microsoft.com/.default", client_auth: body}
+  fields:
+    - {key: tenant_id, label: Tenant ID, placeholder: 00000000-0000-0000-0000-000000000000,
+       help: "Entra admin center → Overview → Tenant ID"}
+    - {key: client_id, label: Application (client) ID,
+       help: "Entra admin center → App registrations → New registration. Add Application permissions (e.g. User.Read.All, Directory.Read.All) and grant admin consent."}
+    - {key: client_secret, label: Client secret, secret: true, help: "The app registration → Certificates & secrets → New client secret",
+       docs: "https://learn.microsoft.com/graph/auth-v2-service"}
+  suggested: ["GET /users", "GET /groups", "GET /devices", "GET /subscribedSkus", "GET /organization"]
+
+- id: autotask
+  name: Autotask PSA
+  category: msp
+  description: Companies, contacts, tickets, configuration items and contracts in Datto Autotask.
+  kind: openapi
+  source: {url: "https://webservices{zone}.autotask.net/atservicesrest/swagger/docs/v1"}
+  base_url: https://webservices{zone}.autotask.net/ATServicesRest
+  auth: {type: headers, headers: {ApiIntegrationCode: "{integration_code}", UserName: "{username}", Secret: "{secret}"}}
+  fields:
+    - {key: zone, label: Zone number, default: "2",
+       help: "From https://webservices.autotask.net/atservicesrest/v1.0/zoneInformation?user=<your API user> — the number in webservicesN"}
+    - {key: username, label: API user name, help: "Admin → Resources/Users → an API-only user (API User security level)"}
+    - {key: secret, label: API user secret, secret: true}
+    - {key: integration_code, label: Tracking identifier (integration code), secret: true,
+       help: "Set on the API user (Custom (Internal Integration))",
+       docs: "https://www.autotask.net/help/developerhelp/Content/APIs/REST/General_Topics/REST_Security_Auth.htm"}
+  suggested: ["GET /V1.0/Companies/query", "GET /V1.0/Tickets/query", "GET /V1.0/ConfigurationItems/query"]
+
+- id: halo_psa
+  name: Halo PSA
+  category: msp
+  description: Tickets, clients, sites, assets and users in HaloPSA (starter definition).
+  kind: openapi
+  source: {file: specs/halo_psa.yaml}
+  base_url: https://{tenant}.halopsa.com/api
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://{tenant}.halopsa.com/auth/token", scope: all, client_auth: body}
+  fields:
+    - {key: tenant, label: Halo tenant, placeholder: yourcompany, help: "The part before .halopsa.com"}
+    - {key: client_id, label: Client ID, help: "Configuration → Integrations → HaloPSA API → View Applications → New (Client ID and Secret, Services)"}
+    - {key: client_secret, label: Client secret, secret: true, docs: "https://halopsa.com/apidoc/authentication"}
+  suggested: ["GET /Tickets", "GET /Client", "GET /Asset"]
+
+- id: ninjaone
+  name: NinjaOne
+  category: msp
+  description: Organizations, devices and alerts in NinjaOne RMM (starter definition).
+  kind: openapi
+  source: {file: specs/ninjaone.yaml}
+  base_url: https://{region}.ninjarmm.com
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://{region}.ninjarmm.com/ws/oauth/token", scope: monitoring, client_auth: body}
+  fields:
+    - {key: region, label: Instance, default: app, help: "app (US), us2, eu, ca or oc — the start of your NinjaOne web address"}
+    - {key: client_id, label: Client ID, help: "Administration → Apps → API → Client App IDs → Add (API Services, Client Credentials, Monitoring scope)"}
+    - {key: client_secret, label: Client secret, secret: true, docs: "https://app.ninjarmm.com/apidocs/"}
+  suggested: ["GET /v2/organizations", "GET /v2/devices", "GET /v2/alerts"]
+
+- id: it_glue
+  name: IT Glue
+  category: msp
+  description: Organizations, configurations, contacts and locations in IT Glue (starter definition).
+  kind: openapi
+  source: {file: specs/it_glue.yaml}
+  base_url: "{api_url}"
+  auth: {type: api_key, api_key: "{api_key}", api_key_name: x-api-key, api_key_in: header}
+  fields:
+    - {key: api_url, label: API address, default: "https://api.itglue.com", help: "EU: https://api.eu.itglue.com, AU: https://api.au.itglue.com"}
+    - {key: api_key, label: API key, secret: true, help: "Account → Settings → API Keys → Generate API Key",
+       docs: "https://api.itglue.com/developer/"}
+  suggested: ["GET /organizations", "GET /configurations"]
+
+- id: hudu
+  name: Hudu
+  category: msp
+  description: Companies, assets, articles and websites in Hudu (starter definition).
+  kind: openapi
+  source: {file: specs/hudu.yaml}
+  base_url: https://{host}/api/v1
+  auth: {type: api_key, api_key: "{api_key}", api_key_name: x-api-key, api_key_in: header}
+  fields:
+    - {key: host, label: Hudu address, placeholder: yourcompany.huducloud.com, help: "Your Hudu web address without https://"}
+    - {key: api_key, label: API key, secret: true, help: "Admin → API Keys → New API key"}
+  suggested: ["GET /companies", "GET /assets"]
+
+- id: huntress
+  name: Huntress
+  category: msp
+  description: Accounts, organizations, agents, incidents and reports in Huntress.
+  kind: openapi
+  source: {url: "https://api.huntress.io/v1/swagger_doc.json"}
+  base_url: https://api.huntress.io
+  auth: {type: basic, username: "{api_key}", password: "{api_secret}"}
+  fields:
+    - {key: api_key, label: API key, help: "Huntress portal → your account menu → API Credentials → Setup"}
+    - {key: api_secret, label: API secret key, secret: true, docs: "https://api.huntress.io/docs"}
+
+- id: pax8
+  name: Pax8
+  category: msp
+  description: Companies, products, subscriptions, orders and invoices in Pax8 (starter definition).
+  kind: openapi
+  source: {file: specs/pax8.yaml}
+  base_url: https://api.pax8.com/v1
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://login.pax8.com/oauth/token", audience: "api://p8p.client", client_auth: body}
+  fields:
+    - {key: client_id, label: Client ID, help: "Pax8 → Integrations → API → Create a new app"}
+    - {key: client_secret, label: Client secret, secret: true, docs: "https://devx.pax8.com/docs/authentication"}
+  suggested: ["GET /companies", "GET /subscriptions"]
+
+- id: meraki
+  name: Cisco Meraki
+  category: msp
+  description: Organizations, networks, devices and clients in the Meraki Dashboard.
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/meraki/openapi/master/openapi/spec3.json"}
+  base_url: https://api.meraki.com/api/v1
+  auth: {type: bearer, token: "{api_key}"}
+  fields:
+    - {key: api_key, label: API key, secret: true, help: "Dashboard → My profile → API access → Generate new API key (enable API access under Organization → Settings)",
+       docs: "https://developer.cisco.com/meraki/api-v1/authorization/"}
+  suggested: ["GET /organizations"]
+
+- id: auvik
+  name: Auvik
+  category: msp
+  description: Tenants, devices, networks and alerts in Auvik (starter definition).
+  kind: openapi
+  source: {file: specs/auvik.yaml}
+  base_url: https://auvikapi.{region}.my.auvik.com/v1
+  auth: {type: basic, username: "{username}", password: "{api_key}"}
+  fields:
+    - {key: region, label: Region, default: us1, help: "The cluster in your Auvik address, e.g. us1, us2, eu1, au1"}
+    - {key: username, label: User name (email)}
+    - {key: api_key, label: API key, secret: true, help: "Your user menu → API key → Generate",
+       docs: "https://auvikapi.us1.my.auvik.com/docs"}
+  suggested: ["GET /tenants", "GET /inventory/device/info"]
+
+- id: knowbe4
+  name: KnowBe4
+  category: msp
+  description: Account, users, groups, phishing and training campaigns (Reporting API, starter definition).
+  kind: openapi
+  source: {file: specs/knowbe4.yaml}
+  base_url: https://{region}.api.knowbe4.com/v1
+  auth: {type: bearer, token: "{api_key}"}
+  fields:
+    - {key: region, label: Region, default: us, help: "us, eu, ca, uk or de"}
+    - {key: api_key, label: Reporting API key, secret: true, help: "Account Settings → Account Integrations → API → Reporting API",
+       docs: "https://developer.knowbe4.com/rest/reporting"}
+  suggested: ["GET /users", "GET /phishing/campaigns"]
+
+# ── Business / SaaS ───────────────────────────────────────────────────────────────────────────────────────────
+- id: stripe
+  name: Stripe
+  category: business
+  description: Customers, invoices, subscriptions, charges and payouts.
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json"}
+  base_url: https://api.stripe.com
+  auth: {type: bearer, token: "{secret_key}"}
+  fields:
+    - {key: secret_key, label: Secret key (or restricted key), secret: true, placeholder: rk_live_…,
+       help: "Developers → API keys. A restricted key with read access is safest.", docs: "https://docs.stripe.com/keys"}
+  suggested: ["GET /v1/customers", "GET /v1/invoices", "GET /v1/subscriptions"]
+
+- id: hubspot
+  name: HubSpot
+  category: business
+  description: Companies, contacts, deals and tickets in the HubSpot CRM (starter definition).
+  kind: openapi
+  source: {file: specs/hubspot.yaml}
+  base_url: https://api.hubapi.com
+  auth: {type: bearer, token: "{token}"}
+  fields:
+    - {key: token, label: Private app access token, secret: true, help: "Settings → Integrations → Private Apps → Create (give it CRM read scopes)",
+       docs: "https://developers.hubspot.com/docs/api/private-apps"}
+  suggested: ["GET /crm/v3/objects/companies", "GET /crm/v3/objects/contacts"]
+
+- id: salesforce
+  name: Salesforce
+  category: business
+  description: Run SOQL queries and read any object (starter definition).
+  kind: openapi
+  source: {file: specs/salesforce.yaml}
+  base_url: https://{domain}.my.salesforce.com
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://{domain}.my.salesforce.com/services/oauth2/token", client_auth: body}
+  fields:
+    - {key: domain, label: My Domain, placeholder: yourcompany, help: "The part before .my.salesforce.com"}
+    - {key: client_id, label: Consumer key, help: "Setup → App Manager → New Connected App → enable OAuth + Client Credentials Flow (set a Run As user)"}
+    - {key: client_secret, label: Consumer secret, secret: true,
+       docs: "https://help.salesforce.com/s/articleView?id=sf.connected_app_client_credentials_setup.htm"}
+  suggested: ["GET /services/data/v60.0/query", "GET /services/data/v60.0/sobjects"]
+
+- id: xero
+  name: Xero
+  category: business
+  description: Invoices, contacts, accounts, payments and reports (Accounting API).
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/XeroAPI/Xero-OpenAPI/master/xero_accounting.yaml"}
+  base_url: https://api.xero.com/api.xro/2.0
+  auth: {type: oauth2_client_credentials, client_id: "{client_id}", client_secret: "{client_secret}",
+         token_url: "https://identity.xero.com/connect/token",
+         scope: "accounting.transactions.read accounting.contacts.read accounting.settings.read accounting.reports.read"}
+  extra_headers: {xero-tenant-id: "{tenant_id}"}
+  fields:
+    - {key: client_id, label: Client ID, help: "developer.xero.com → My Apps → New app → Custom connection"}
+    - {key: client_secret, label: Client secret, secret: true, docs: "https://developer.xero.com/documentation/guides/oauth2/custom-connections/"}
+    - {key: tenant_id, label: Tenant ID, required: false, help: "Only needed if the app is connected to more than one organisation"}
+  suggested: ["GET /Invoices", "GET /Contacts"]
+
+- id: shopify
+  name: Shopify
+  category: business
+  description: Orders, products, customers and inventory through the Admin GraphQL API.
+  kind: graphql
+  source: {}
+  base_url: https://{shop}.myshopify.com/admin/api/2025-07/graphql.json
+  auth: {type: api_key, api_key: "{access_token}", api_key_name: X-Shopify-Access-Token, api_key_in: header}
+  fields:
+    - {key: shop, label: Store, placeholder: yourstore, help: "The part before .myshopify.com"}
+    - {key: access_token, label: Admin API access token, secret: true, help: "Settings → Apps → Develop apps → Create an app → Admin API scopes (read_*) → Install",
+       docs: "https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/generate-app-access-tokens-admin"}
+
+- id: zendesk
+  name: Zendesk Support
+  category: business
+  description: Tickets, users, organizations, groups and views.
+  kind: openapi
+  source: {url: "https://developer.zendesk.com/zendesk/oas.yaml"}
+  base_url: https://{subdomain}.zendesk.com
+  auth: {type: basic, username: "{email}/token", password: "{api_token}"}
+  fields:
+    - {key: subdomain, label: Subdomain, placeholder: yourcompany, help: "The part before .zendesk.com"}
+    - {key: email, label: Agent email}
+    - {key: api_token, label: API token, secret: true, help: "Admin Center → Apps and integrations → APIs → Zendesk API → Add API token",
+       docs: "https://developer.zendesk.com/api-reference/introduction/security-and-auth/"}
+  suggested: ["GET /api/v2/tickets", "GET /api/v2/organizations"]
+
+- id: freshdesk
+  name: Freshdesk
+  category: business
+  description: Tickets, contacts, companies and agents (starter definition).
+  kind: openapi
+  source: {file: specs/freshdesk.yaml}
+  base_url: https://{domain}.freshdesk.com/api/v2
+  auth: {type: basic, username: "{api_key}", password: X}
+  fields:
+    - {key: domain, label: Helpdesk name, placeholder: yourcompany, help: "The part before .freshdesk.com"}
+    - {key: api_key, label: API key, secret: true, help: "Your profile picture → Profile settings → View API key",
+       docs: "https://developers.freshdesk.com/api/#authentication"}
+  suggested: ["GET /tickets", "GET /companies"]
+
+# ── Developer / productivity ─────────────────────────────────────────────────────────────────────────────────
+- id: github
+  name: GitHub
+  category: developer
+  description: Repositories, issues, pull requests, actions and organizations.
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json"}
+  base_url: https://api.github.com
+  auth: {type: bearer, token: "{token}"}
+  fields:
+    - {key: token, label: Personal access token, secret: true, placeholder: github_pat_…,
+       help: "Settings → Developer settings → Personal access tokens → Fine-grained tokens (read-only to start)",
+       docs: "https://docs.github.com/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"}
+  suggested: ["GET /user/repos", "GET /repos/{owner}/{repo}/issues", "GET /repos/{owner}/{repo}/pulls"]
+
+- id: gitlab
+  name: GitLab
+  category: developer
+  description: Projects, issues, merge requests, pipelines and groups.
+  kind: openapi
+  source: {url: "https://gitlab.com/gitlab-org/gitlab/-/raw/master/doc/api/openapi/openapi_v2.yaml"}
+  base_url: https://{host}
+  auth: {type: api_key, api_key: "{token}", api_key_name: PRIVATE-TOKEN, api_key_in: header}
+  fields:
+    - {key: host, label: GitLab address, default: gitlab.com, help: "gitlab.com, or your self-managed host"}
+    - {key: token, label: Personal access token, secret: true, help: "Preferences → Access tokens (read_api scope)",
+       docs: "https://docs.gitlab.com/user/profile/personal_access_tokens/"}
+
+- id: jira
+  name: Jira Cloud
+  category: developer
+  description: Issues, projects, boards, search (JQL) and users.
+  kind: openapi
+  source: {url: "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json"}
+  base_url: https://{site}.atlassian.net
+  auth: {type: basic, username: "{email}", password: "{api_token}"}
+  fields:
+    - {key: site, label: Site, placeholder: yourcompany, help: "The part before .atlassian.net"}
+    - {key: email, label: Atlassian account email}
+    - {key: api_token, label: API token, secret: true, help: "id.atlassian.com → Security → Create and manage API tokens",
+       docs: "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/"}
+  suggested: ["GET /rest/api/3/search/jql", "GET /rest/api/3/project/search"]
+
+- id: confluence
+  name: Confluence Cloud
+  category: developer
+  description: Spaces, pages, search and content.
+  kind: openapi
+  source: {url: "https://developer.atlassian.com/cloud/confluence/swagger.v3.json"}
+  base_url: https://{site}.atlassian.net
+  auth: {type: basic, username: "{email}", password: "{api_token}"}
+  fields:
+    - {key: site, label: Site, placeholder: yourcompany, help: "The part before .atlassian.net"}
+    - {key: email, label: Atlassian account email}
+    - {key: api_token, label: API token, secret: true, help: "id.atlassian.com → Security → Create and manage API tokens",
+       docs: "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/"}
+
+- id: slack
+  name: Slack
+  category: developer
+  description: Channels, messages, users and conversations (Web API).
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/slackapi/slack-api-specs/master/web-api/slack_web_openapi_v2.json"}
+  base_url: https://slack.com/api
+  auth: {type: bearer, token: "{token}"}
+  fields:
+    - {key: token, label: Bot token, secret: true, placeholder: xoxb-…, help: "api.slack.com/apps → your app → OAuth & Permissions → Bot User OAuth Token",
+       docs: "https://api.slack.com/authentication/token-types"}
+  suggested: ["GET /conversations.list", "GET /users.list"]
+
+- id: notion
+  name: Notion
+  category: developer
+  description: Search, databases, pages and users.
+  kind: openapi
+  source: {url: "https://api.apis.guru/v2/specs/notion.com/1.0.0/openapi.json"}
+  base_url: https://api.notion.com
+  auth: {type: bearer, token: "{token}"}
+  extra_headers: {Notion-Version: "2022-06-28"}
+  fields:
+    - {key: token, label: Internal integration secret, secret: true, help: "notion.so/my-integrations → New integration; then share pages with it",
+       docs: "https://developers.notion.com/docs/authorization"}
+
+- id: asana
+  name: Asana
+  category: developer
+  description: Workspaces, projects, tasks and users.
+  kind: openapi
+  source: {url: "https://raw.githubusercontent.com/Asana/openapi/master/defs/asana_oas.yaml"}
+  base_url: https://app.asana.com/api/1.0
+  auth: {type: bearer, token: "{token}"}
+  fields:
+    - {key: token, label: Personal access token, secret: true, help: "My settings → Apps → Developer apps → Personal access tokens",
+       docs: "https://developers.asana.com/docs/personal-access-token"}
+  suggested: ["GET /workspaces", "GET /projects"]
+
+- id: trello
+  name: Trello
+  category: developer
+  description: Boards, lists, cards and members.
+  kind: openapi
+  source: {url: "https://developer.atlassian.com/cloud/trello/swagger.v3.json"}
+  base_url: https://api.trello.com/1
+  auth: {type: headers, headers: {Authorization: 'OAuth oauth_consumer_key="{api_key}", oauth_token="{token}"'}}
+  fields:
+    - {key: api_key, label: API key, help: "trello.com/power-ups/admin → your Power-Up → API key"}
+    - {key: token, label: Token, secret: true, help: "On the API key page, follow the Token link and allow access",
+       docs: "https://developer.atlassian.com/cloud/trello/guides/rest-api/api-introduction/"}
+  suggested: ["GET /members/{id}/boards"]
+
+# ── Databases & generic ───────────────────────────────────────────────────────────────────────────────────────
+- id: postgresql
+  name: PostgreSQL
+  category: data
+  description: Read-only tools to list tables, describe them and run SELECT queries.
+  kind: sql
+  source: {}
+  dsn: "postgresql://{username}:{password}@{host}:{port}/{database}"
+  fields:
+    - {key: host, label: Host}
+    - {key: port, label: Port, default: "5432"}
+    - {key: database, label: Database}
+    - {key: username, label: User name, help: "A read-only database user is safest"}
+    - {key: password, label: Password, secret: true}
+
+- id: sql_server
+  name: SQL Server
+  category: data
+  description: Read-only tools for Microsoft SQL Server / Azure SQL (needs the optional ODBC driver).
+  kind: sql
+  source: {}
+  dsn: "mssql://{username}:{password}@{host}:{port}/{database}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+  fields:
+    - {key: host, label: Host}
+    - {key: port, label: Port, default: "1433"}
+    - {key: database, label: Database}
+    - {key: username, label: User name, help: "A read-only SQL login is safest"}
+    - {key: password, label: Password, secret: true,
+       docs: "https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server"}
+
+- id: mysql
+  name: MySQL / MariaDB
+  category: data
+  description: Read-only tools for MySQL or MariaDB (needs the optional driver).
+  kind: sql
+  source: {}
+  dsn: "mysql://{username}:{password}@{host}:{port}/{database}"
+  fields:
+    - {key: host, label: Host}
+    - {key: port, label: Port, default: "3306"}
+    - {key: database, label: Database}
+    - {key: username, label: User name, help: "A read-only user is safest"}
+    - {key: password, label: Password, secret: true}
+
+- id: mongodb
+  name: MongoDB
+  category: data
+  description: Read-only find, count and aggregate tools.
+  kind: mongodb
+  source: {}
+  dsn: "{connection_string}"
+  fields:
+    - {key: connection_string, label: Connection string, secret: true, placeholder: "mongodb+srv://user:pass@cluster.example.net/db",
+       help: "Atlas → Connect → Drivers. A read-only user is safest."}
+
+- id: any_openapi
+  name: Any API with an OpenAPI / Swagger link
+  category: data
+  description: Paste the link to an OpenAPI or Swagger definition; the sign-in it needs is read from it.
+  kind: openapi
+  source: {url: "{definition_url}"}
+  base_url: "{base_url}"
+  auth: {type: detect}
+  fields:
+    - {key: definition_url, label: Definition URL, placeholder: "https://api.example.com/openapi.json"}
+    - {key: base_url, label: Base URL, required: false, help: "Only if the definition doesn't say where the API lives"}
+
+- id: mcp_server
+  name: Another MCP server
+  category: data
+  description: Serve another MCP server's tools here, behind your sign-in, approvals and audit log.
+  kind: mcp
+  source: {}
+  base_url: "{url}"
+  auth: {type: bearer, token: "{token}"}
+  fields:
+    - {key: url, label: MCP server URL, placeholder: "https://mcp.example.com/mcp"}
+    - {key: token, label: Bearer token, secret: true, required: false, help: "Leave empty if the server doesn't need one"}
+
+- id: petstore
+  name: Swagger Petstore (demo)
+  category: data
+  description: A public demo API, to try the app without any credentials.
+  kind: openapi
+  source: {url: "https://petstore3.swagger.io/api/v3/openapi.json"}
+  base_url: https://petstore3.swagger.io/api/v3
+  auth: {type: none}
+  fields: []
+  suggested: ["GET /pet/findByStatus", "GET /store/inventory"]

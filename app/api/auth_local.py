@@ -13,7 +13,7 @@ from urllib.parse import parse_qs
 
 import structlog
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.api.auth_m365 import _safe_next, create_session, oidc_configured, provider_name
 from app.auth.passwords import DUMMY_HASH, verify_password, verify_totp
@@ -70,7 +70,11 @@ button{{width:100%;margin-top:18px;padding:10px;border:0;border-radius:8px;backg
 
 
 @router.get("/auth/local", response_class=HTMLResponse)
-async def local_form(next: str | None = None) -> HTMLResponse:  # noqa: A002
+async def local_form(next: str | None = None) -> Response:  # noqa: A002
+    from app.api.setup import needs_setup
+
+    if await needs_setup():  # brand-new install: nobody to sign in as yet — create the first account
+        return RedirectResponse("/setup", 302)
     return _page(_safe_next(next))
 
 

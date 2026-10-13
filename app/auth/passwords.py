@@ -70,3 +70,18 @@ def verify_totp(secret_b32: str, code: str, at: float | None = None, window: int
 def totp_uri(secret_b32: str, username: str, issuer: str) -> str:
     label = quote(f"{issuer}:{username}")
     return f"otpauth://totp/{label}?secret={secret_b32}&issuer={quote(issuer)}&algorithm=SHA1&digits=6&period=30"
+
+
+def totp_qr_data_uri(uri: str) -> str:
+    """QR code for an ``otpauth://`` URI as an SVG data URI, drawn locally (the secret never leaves the server)."""
+    import segno
+
+    # Black on solid white with the standard 4-module quiet zone: readable by phone cameras in dark mode too.
+    return segno.make(uri, error="m").svg_data_uri(scale=6, border=4, dark="#000", light="#fff")
+
+
+def totp_qr_terminal(uri: str) -> None:
+    """Print the QR code to the terminal (for the CLI)."""
+    import segno
+
+    segno.make(uri, error="m").terminal(compact=True)

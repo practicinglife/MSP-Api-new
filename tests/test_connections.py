@@ -164,8 +164,8 @@ def test_connection_scopes_and_roles(app_client, db_factory) -> None:  # type: i
                             headers={"X-API-Key": good})
     assert write.status_code == 403
 
-    # Editors can call but not create / delete connections (Approver only)
-    app_client.cookies.set("msp_session", make_session(db_factory, EDITOR, "ed@example.com"))
+    # Readers can list and call but not create / delete connections (Approver only)
+    app_client.cookies.set("msp_session", make_session(db_factory, VIEWER, "reader@example.com"))
     assert app_client.post("/api/connections", json={"kind": "openapi", "source": {"text": "x"}}).status_code == 403
     assert app_client.delete("/api/connections/petstore").status_code == 403
     assert app_client.get("/api/connections").status_code == 200

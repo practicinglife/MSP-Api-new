@@ -182,7 +182,7 @@ Fixes are change requests: an Editor submits, an Approver approves. Hyper-V host
 <script>
 const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const AV={sentinelone:'SentinelOne',eset:'ESET'};
-async function who(){const m=await (await fetch('/auth/me')).json();$('who').innerHTML=m.signed_in?esc(m.name)+' · '+esc((m.roles||[]).join(', ')):(m.configured?'<a href="/auth/login?next=/av-review">Sign in with Microsoft 365</a>':'')}
+async function who(){const m=await (await fetch('/auth/me')).json();$('who').innerHTML=m.signed_in?esc(m.name)+' · '+esc((m.roles||[]).map(r=>r.replace('MSPTools.','')).join(', ')):(m.configured?'<a href="/auth/login?next=/av-review">Sign in with Microsoft 365</a>':'')}
 async function propose(command,params,btn){btn&&(btn.disabled=true);const r=await fetch('/api/changes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command,params})});
  const j=await r.json();if(!r.ok){alert(j.detail||r.status);btn&&(btn.disabled=false);return}location.href='/changes/'+j.id}
 function age(ts){if(!ts)return '';const d=(Date.now()-Date.parse(ts))/864e5;return d<1?'today':Math.floor(d)+'d ago'}

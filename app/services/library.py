@@ -40,7 +40,7 @@ def entries() -> list[dict[str, Any]]:
             "kind": "playbook" if is_pb else "command", "name": c["name"], "title": c["title"],
             "description": c["description"], "risk": c["risk"],
             "how": f"propose_change(command='{c['name']}', params=…) — describe_command for the parameters; "
-                   "runs only after an Editor submits and an Approver approves",
+                   "runs only after an Editor submits, an Approver approves",
             **({"mtime": f.stat().st_mtime} if f and f.exists() else {}),
         })
     for name, spec in load_recipes().items():

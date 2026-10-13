@@ -447,7 +447,10 @@ async def _build_eset_connect_lookups() -> tuple[
     """
     from app.connectors.eset_connect import EsetConnectConnector
 
-    connector = EsetConnectConnector()
+    from app.services.builtin_integrations import detail_connector
+
+    # Credentials saved in the app first, then .env
+    connector = await detail_connector("eset_connect") or EsetConnectConnector()
     if connector.check_config():
         return {}, {}, {}
 

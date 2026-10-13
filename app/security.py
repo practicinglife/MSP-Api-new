@@ -10,11 +10,14 @@ Authentication — **every** route needs a caller (session cookie, connection ke
 too. Only health, sign-in and OAuth discovery/registration/token are public. Browsers without a session are
 sent to ``/auth/login``; everything else gets 401.
 
-Authorization —
-* ``/api/admin/*`` and ``/admin/*``: Admin or Approver.
-* Connector credentials (``/api/connectors/register|configs``) changes: Approver.
-* Any other non-GET under ``/api/``: Editor (plus a ``write`` scope for keys/tokens), except proposals,
-  which anyone signed in may make (they change nothing until approved).
+Authorization — four roles, each including the ones before it (``app/auth/principal.py``):
+* **Reader**: everything that only reads, calling read-only operations, and proposals (they change nothing
+  until approved).
+* **Editor**: writes (plus a ``write`` scope for keys/tokens, and the platform's write mode) and submitting
+  change requests.
+* **Approver**: final approval of change requests; connections and their credentials, built-in integrations,
+  local copies, write modes, connection import/export.
+* **Admin**: the rest of ``/api/admin/*`` and ``/admin/*`` — users, keys, sign-in, certificates, packs, audit.
 * OAuth access tokens are bound to the MCP server they were issued for (RFC 8707 audience).
 * Direct writes to a vendor additionally pass the platform's write mode (``app/auth/write_mode.py``).
 """
@@ -32,9 +35,9 @@ from urllib.parse import quote, urlparse
 import structlog
 
 from app.auth import audit, ratelimit
-from app.auth.principal import ROLE_APPROVER, Principal, current_principal, resolve
+from app.auth.principal import ROLE_ADMIN, ROLE_APPROVER, Principal, current_principal, resolve
 from app.mcp.protocol import MCP_PATH, MCP_PATH_RE
-from app.org_profile import EDGE_DOMAIN, EXTERNAL_BASE_URL, OFFICE_IPS
+from app.org_profile import EDGE_DOMAIN, external_base_url, OFFICE_IPS
 
 log = structlog.get_logger(__name__)
 
@@ -55,13 +58,15 @@ _PUBLIC_PATHS = re.compile(
 # Unauthenticated endpoints that take guesses (passwords, codes) — tighter per-IP limit.
 _ANON_LIMITED = re.compile(r"^/(auth/local|setup/admin|oauth/(token|authorize|register))$")
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-# Writes any signed-in caller may make: they only *propose* (nothing runs until an Editor + Approver act), or
+# Writes any signed-in caller may make: they only *propose* (nothing runs until an Editor and an Approver act), or
 # the route enforces its own role + CSRF checks (submit/approve/reject).
 _PROPOSE_ONLY = re.compile(
     r"^/api/(changes|changes/[^/]+/(submit|approve|reject|cancel)|av/sweep|helpdesk/s1-incidents/propose"
     r"|tickets/triage|agent/request|agent/workflows/[^/]+/replay)$"
 )
 _ADMIN_PATHS = re.compile(r"^/(api/)?admin(/|$)")
+# Admin-area pages an Approver may use: they're about connections, not about people or the server
+_ADMIN_FOR_APPROVERS = re.compile(r"^/api/admin/(write-modes(/[^/]+)?|connections/(export|import))$")
 _APPROVER_ONLY = re.compile(
     r"^/api/(connectors/(register|configs(/.*)?)"
     # connections: create / edit / delete / re-import / operation flags / local-copy syncs
@@ -106,7 +111,7 @@ def _host_allowed(host: str) -> bool:
 
 def _mcp_resource_path(principal: Principal) -> str:
     """Path of the MCP server an OAuth token was issued for (tokens from before binding → /msp/mcp)."""
-    resource = principal.resource or f"{EXTERNAL_BASE_URL}/msp/mcp"
+    resource = principal.resource or f"{external_base_url()}/msp/mcp"
     return urlparse(resource).path.rstrip("/") or "/"
 
 
@@ -203,8 +208,10 @@ class NetworkBoundaryMiddleware:
 
 
 def _authorize(principal: Principal, method: str, path: str, headers: dict[str, str]) -> tuple[int, str] | None:
-    if _ADMIN_PATHS.match(path) and not principal.has_role(ROLE_APPROVER):
-        return 403, "Requires the Admin or Approver role"
+    if _ADMIN_PATHS.match(path):
+        needed = ROLE_APPROVER if _ADMIN_FOR_APPROVERS.match(path) else ROLE_ADMIN
+        if not principal.has_role(needed):
+            return 403, f"Requires the {needed} role"
     if method in _SAFE_METHODS:
         return None
     api_path = path.startswith(("/api/", "/admin/"))
@@ -216,11 +223,11 @@ def _authorize(principal: Principal, method: str, path: str, headers: dict[str, 
     if not api_path:
         return None
     if _APPROVER_ONLY.match(path) and not principal.has_role(ROLE_APPROVER):
-        return 403, "Vendor credentials and connector settings require the Approver role"
+        return 403, "Connections, credentials and integration settings require the Approver role"
     if _PROPOSE_ONLY.match(path) or _ADMIN_PATHS.match(path) or _SELF_CHECKED.match(path):
         return None
     if not principal.can_edit:
-        return 403, "Requires the Editor or Approver role"
+        return 403, "Requires the Editor role"
     if not any(s.endswith(":write") for s in principal.scopes):
         return 403, "This credential is read-only"
     return None
@@ -242,7 +249,7 @@ async def _unauthenticated(send: Any, method: str, path: str, headers: dict[str,
         await send({"type": "http.response.body", "body": b""})
         return
     # MCP clients discover the OAuth server from the metadata of the exact server they called (RFC 9728).
-    www = f'Bearer resource_metadata="{EXTERNAL_BASE_URL}/.well-known/oauth-protected-resource{path if is_mcp else ""}"'
+    www = f'Bearer resource_metadata="{external_base_url()}/.well-known/oauth-protected-resource{path if is_mcp else ""}"'
     await _respond(send, 401, {"detail": "Sign-in required: a session, connection key or OAuth token"},
                    extra=[(b"www-authenticate", www.encode())])
 

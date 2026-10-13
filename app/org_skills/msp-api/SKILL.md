@@ -48,7 +48,7 @@ Common recipes: `client-health`, `onboarding-status`, `coverage-gaps-report`.
 
 ## Safety
 - Reading tools are read-only. Changes are only **proposed** (`propose_change`); they run after a
-  Microsoft 365 Editor submits them and an Approver gives final approval. `refresh_client_registry` is safe.
+  an Editor submits them and an Approver gives final approval. `refresh_client_registry` is safe.
 - Never suggest triggering a full reconciliation casually — it freezes the server for 15–25 minutes.
   Admins run it from the dashboard.
 - Remediation (installs, uninstalls, offboarding), ticket edits, and renames are done by admins in the
