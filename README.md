@@ -638,27 +638,7 @@ ruff check app tests
 
 ---
 
-## Contributing
 
-Contributions are welcome:
-
-1. Open an issue describing the change.
-2. Fork, create a branch, and keep changes focused.
-3. Add or update tests. The suite must pass offline (`pytest`), and `ruff check app tests` must be clean.
-4. Schema changes need an Alembic migration: `alembic revision --autogenerate -m "what changed"`.
-5. Never include real credentials, customer data or internal hostnames in code, tests, screenshots or issues.
-
----
-
-## Support the Project
-
-MSP-API is free and open source. If the project is useful to you or your MSP, you can help support ongoing
-development.
-
-**[Support MSP-API](SUPPORT_LINK_HERE)**
-
-Financial support does not include technical support, consulting, SLA commitments, or guaranteed feature
-development.
 
 ---
 
