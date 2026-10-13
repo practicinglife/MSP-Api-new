@@ -97,3 +97,38 @@ def test_unknown_old_revision_is_adopted_and_rerun_is_a_no_op(tmp_path) -> None:
     asyncio.run(init_db(_url(db)))  # second start: nothing to do
     assert _revision(db) == head()
     assert BASELINE == "0001_baseline"
+
+
+def test_hand_made_read_only_labels_on_writes_are_reset(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """0004: a POST labelled read-only by hand goes back through the write mode; a template's POST reads stay."""
+    from alembic import command
+    from app.db.migrations import config
+
+    db = tmp_path / "labels.db"
+    asyncio.run(init_db(_url(db)))
+    engine = create_engine(f"sqlite:///{db.as_posix()}")
+    with engine.begin() as conn:
+        command.downgrade(config(conn), "0003_three_roles")
+    con = sqlite3.connect(db)
+    con.execute("INSERT INTO connections (id, slug, name, kind, base_url, auth_type, description, enabled, "
+                "operation_count, settings, created_by, created_at, updated_at) VALUES "
+                "('c1', 'sc', 'SC', 'openapi', '', 'none', '', 1, 0, '{\"template\": \"screenconnect\"}', 'x', "
+                "'2026-01-01 00:00:00', '2026-01-01 00:00:00'), ('c2', 'pets', 'Pets', 'openapi', '', 'none', '', 1, 0, '{}', 'x', "
+                "'2026-01-01 00:00:00', '2026-01-01 00:00:00')")
+    rows = [("o1", "c1", "POST", "/GetSessionsByFilter", 1), ("o2", "c1", "POST", "/SendCommandToSession", 1),
+            ("o3", "c2", "POST", "/pets", 1), ("o4", "c2", "GET", "/pets", 1), ("o5", "c2", "DELETE", "/pets/1", 0)]
+    con.executemany("INSERT INTO operations (id, connection_id, key, name, title, description, method, target, "
+                    "read_only, pinned, deprecated, enabled, search_text) VALUES "
+                    "(?, ?, ?, ?, '', '', ?, ?, ?, 0, 0, 1, '')",
+                    [(i, c, i, i, m, t, ro) for i, c, m, t, ro in rows])
+    con.commit()
+    con.close()
+    with engine.begin() as conn:
+        command.upgrade(config(conn), "head")
+    engine.dispose()
+
+    con = sqlite3.connect(db)
+    got = {r[0]: r[1:] for r in con.execute(
+        "SELECT id, read_only, defined_read_only, read_only_template FROM operations")}
+    con.close()
+    assert got == {"o1": (1, 0, 1), "o2": (0, 0, 0), "o3": (0, 0, 0), "o4": (1, 1, 0), "o5": (0, 0, 0)}
