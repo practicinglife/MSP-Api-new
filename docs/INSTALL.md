@@ -37,7 +37,7 @@ changes and publishes PostgreSQL on localhost.
 ```bash
 docker compose exec app python -m app.cli setup-code
 ```
-Open `http://<server>:8000/setup` from your network, enter that code, choose a username and password, and add
+Open `https://<server>:8000/setup` from your network (the app serves HTTPS only; until you install a trusted certificate it uses its own local CA, so the browser warns once), enter that code, choose a username and password, and add
 the account to an authenticator app (Microsoft or Google Authenticator, 1Password …). The page works only
 while nobody can sign in yet, and never through the internet edge.
 
@@ -47,9 +47,13 @@ while nobody can sign in yet, and never through the internet edge.
 Signed in as the administrator, `/setup` lists what still needs attention, with the exact `.env` lines.
 After editing `.env`, run `docker compose up -d` to restart.
 
-**HTTPS.** Required for real use: sign-in cookies and keys must not cross the network in plain text.
-- Use `deploy/edge/setup-edge.sh` (nginx + Let's Encrypt). It also restricts what the internet can reach.
-- Or put your own reverse proxy in front.
+**HTTPS.** The app only ever serves HTTPS. Out of the box it uses a certificate from its own local CA (kept in the
+`appcerts` volume); set `MSP_CERT_NAMES=server-name,192.168.1.10` in `.env` so it names this server. For a trusted
+certificate:
+- **Get started → Secure it** installs a Let's Encrypt certificate (DNS record) or one you upload, and restarts the
+  app on it.
+- Or use `deploy/edge/setup-edge.sh` (nginx + Let's Encrypt), which also restricts what the internet can reach. It
+  proxies to the app at `https://127.0.0.1:8000`; re-run it after upgrading from a version that served plain HTTP.
 - Then set `MSP_EXTERNAL_BASE_URL=https://tools.example.com`.
 
 **Single sign-on (optional).** Register an app with your identity provider:

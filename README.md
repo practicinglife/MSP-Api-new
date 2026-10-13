@@ -486,7 +486,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose exec app python -m app.cli setup-code
 ```
 
-Open `http://<server>:8000/setup`. Full guide: [docs/INSTALL.md](docs/INSTALL.md). Internet access for MCP
+Open `https://<server>:8000/setup`. The container serves HTTPS only, the same way as Option A: a local CA certificate (set `MSP_CERT_NAMES=<server-name>,<server-ip>` in `.env` so it names the server) until **Secure it** installs a trusted one. Full guide: [docs/INSTALL.md](docs/INSTALL.md). Internet access for MCP
 through nginx: [deploy/edge/README.md](deploy/edge/README.md).
 
 ---
@@ -508,6 +508,7 @@ Settings come from `.env` (template: [`.env.example`](.env.example)) or from the
 | `MSP_RATE_LIMIT_PER_MIN`, `MSP_RATE_LIMIT_ANON_PER_MIN` | Rate limits |
 | `MSP_EDGE_DOMAIN`, `MSP_OFFICE_IPS` | Internet edge name, and addresses treated as the office |
 | `MSP_API_DIRECTORY` | `off` disables the public API directory search |
+| `MSP_CERT_NAMES` | Extra names and addresses for the local HTTPS certificate (e.g. the Docker host) |
 
 Vendor credentials for the MSP pack can be set in `.env` (see `.env.example`). It's better to enter them in
 **Connections → Built-in integrations**, where they are stored encrypted. Admin commands:

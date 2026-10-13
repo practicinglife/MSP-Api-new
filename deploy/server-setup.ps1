@@ -22,5 +22,5 @@ Set-Location "C:\MSP-Api-Tools"
 # 5. First-time build & run
 docker-compose up -d --build
 
-Write-Host "`n✅ Server setup complete. App running at http://localhost:8000" -ForegroundColor Green
+Write-Host "`n✅ Server setup complete. App running at https://localhost:8000" -ForegroundColor Green
 Write-Host "Run deploy/pull-and-restart.ps1 to update after pushing from VS." -ForegroundColor Cyan

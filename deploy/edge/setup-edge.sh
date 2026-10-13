@@ -9,14 +9,15 @@
 #           through the public address (NAT loopback) get the full app instead of only MCP/OAuth.
 #
 # Installs nginx + acme.sh, issues a Let's Encrypt cert for $DOMAIN, auto-renews it (acme.sh cron,
-# reloads nginx), and proxies ONLY the MCP + OAuth endpoints to the app on 127.0.0.1:8000 with
+# reloads nginx), and proxies ONLY the MCP + OAuth endpoints to the app on https://127.0.0.1:8000 with
 # X-MSP-Edge: 1 so the app requires a connection key / OAuth token. Safe to re-run.
 set -euo pipefail
 
 MODE="${1:-}"
 DOMAIN="${DOMAIN:-}"
 EMAIL="${EMAIL:-}"                                    # Let's Encrypt expiry notices
-UPSTREAM="${UPSTREAM:-http://127.0.0.1:8000}"
+# The app serves HTTPS only (its own local-CA certificate); this hop stays on the loopback interface.
+UPSTREAM="${UPSTREAM:-https://127.0.0.1:8000}"
 OFFICE_IPS="${OFFICE_IPS:-}"
 # Second layer behind your firewall: Anthropic egress (Claude connectors) + private ranges + office public IPs
 ALLOW_CIDRS="${ALLOW_CIDRS:-127.0.0.1 160.79.104.0/21 192.168.0.0/16 10.0.0.0/8 172.16.0.0/12 $OFFICE_IPS}"
@@ -90,6 +91,7 @@ proxy_common() {
   cat <<EOF
         limit_except GET POST { deny all; }
         proxy_pass $UPSTREAM$1;
+        proxy_ssl_verify off;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-MSP-Edge 1;
@@ -112,6 +114,7 @@ internal_geo() {
 proxy_internal() {
   cat <<EOF
         proxy_pass $UPSTREAM\$uri\$is_args\$args;
+        proxy_ssl_verify off;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-MSP-Edge 1;

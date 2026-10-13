@@ -2,7 +2,7 @@
 # Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Differences from dev:
-#   • app: removes the ./app:/app/app bind-mount (uses image code)
+#   • app: serves HTTPS with app.cli run (no --reload); data/ and certs/ in named volumes
 #   • postgres: persistent named volume so data survives restarts
 #   • postgres: NOT exposed on host port (only reachable via the Docker network)
 #   • ngrok: scaled to 0 by default (set NGROK_AUTHTOKEN + remove the deploy
@@ -10,13 +10,17 @@
 
 services:
   app:
-    volumes: []
+    # HTTPS only, the same runner as a local install: local CA certificate until Get started installs a real one
+    command: ["python", "-m", "app.cli", "run", "--host", "0.0.0.0", "--port", "8000"]
+    volumes: !override              # image code, not the ./app bind mount (needs Compose 2.24+)
+      - appdata:/app/data
+      - appcerts:/app/certs
     restart: always
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
   postgres:
-    ports: []                          # don't expose 5432 to the host
+    ports: !reset []                   # don't expose 5432 to the host (needs Compose 2.24+)
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
@@ -27,4 +31,6 @@ services:
 
 volumes:
   pgdata:
+  appdata:
+  appcerts:
 

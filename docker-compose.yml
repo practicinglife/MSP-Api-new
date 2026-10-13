@@ -29,9 +29,12 @@ services:
       - 1.1.1.1
     volumes:
       - ./app:/app/app
+      - appdata:/app/data     # settings from Get started, installed certificates, generated key
+      - appcerts:/app/certs   # local CA + HTTPS certificate
     # Hot-reload on code changes (the ./app volume mount makes edits live on
     # disk; --reload makes uvicorn pick them up without a manual restart).
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    # HTTPS with the local CA certificate (certs/, kept in a volume); MSP_CERT_NAMES adds the server's name/address.
+    command: ["sh", "-c", "python -m app.cli make-certs >/dev/null && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --ssl-certfile certs/server.crt --ssl-keyfile certs/server.key --reload --reload-dir /app/app"]
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/msp_tools
     depends_on:
@@ -55,7 +58,7 @@ services:
     profiles: ["tunnel"]
     image: ngrok/ngrok:latest
     restart: unless-stopped
-    command: http --domain=${NGROK_DOMAIN:-} app:8000 --log=stdout
+    command: http --domain=${NGROK_DOMAIN:-} https://app:8000 --log=stdout
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:
@@ -83,6 +86,10 @@ services:
       - ngrok
     networks:
       - mspnet
+
+volumes:
+  appdata:
+  appcerts:
 
 networks:
   mspnet:

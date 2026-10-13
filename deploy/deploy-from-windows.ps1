@@ -64,12 +64,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ── 4. Health probe from this machine ───────────────────────────
-Log "Probing http://${ServerIp}:8000/api/connectors"
-try {
-  $r = Invoke-WebRequest "http://${ServerIp}:8000/api/connectors" -TimeoutSec 10 -UseBasicParsing
-  Ok "API responded HTTP $($r.StatusCode) — deployment successful"
-  Write-Host "   Open: http://${ServerIp}:8000/" -ForegroundColor White
-} catch {
-  Warn "Could not reach API from this machine: $($_.Exception.Message)"
+Log "Probing https://${ServerIp}:8000/health"
+# The app serves HTTPS with its own local-CA certificate until a trusted one is installed: -k skips the check
+# for this probe only (curl.exe ships with Windows 10+).
+$code = & curl.exe -sk -m 10 -o NUL -w "%{http_code}" "https://${ServerIp}:8000/health"
+if ($code -eq "200") {
+  Ok "App responded HTTP $code — deployment successful"
+  Write-Host "   Open: https://${ServerIp}:8000/" -ForegroundColor White
+} else {
+  Warn "Could not reach the app from this machine (HTTP $code)"
   Warn "(Server may be behind a firewall — check from inside the LAN.)"
 }

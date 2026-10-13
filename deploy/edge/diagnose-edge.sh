@@ -19,6 +19,6 @@ s "acme cron"; crontab -l 2>&1 | grep -i acme || echo "no acme cron"
 s "nginx error log"; tail -25 /var/log/nginx/error.log 2>&1
 s "journal nginx"; journalctl -u nginx --no-pager -n 25 2>&1
 s "ufw"; ufw status 2>&1
-s "app on 8000"; curl -s -m 5 -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/health
+s "app on 8000"; curl -sk -m 5 -o /dev/null -w '%{http_code}\n' https://127.0.0.1:8000/health
 s "dns ${DOMAIN:-<DOMAIN not set>}"; [ -n "$DOMAIN" ] && { getent hosts "$DOMAIN" || echo "does not resolve from server"; }
 s "script line endings"; file "$SCRIPT_DIR/setup-edge.sh" 2>&1

@@ -33,8 +33,8 @@ docker compose "${COMPOSE_FILES[@]}" logs --tail=20 app
 
 echo
 echo "✅ Deploy complete. Health check:"
-if curl -fsS "http://127.0.0.1:8000/api/connectors" >/dev/null 2>&1; then
-  echo "   API responding on port 8000"
+if curl -fsSk "https://127.0.0.1:8000/health" >/dev/null 2>&1; then
+  echo "   App responding on https://127.0.0.1:8000"
 else
   echo "   ⚠ API not responding — check logs above"
 fi

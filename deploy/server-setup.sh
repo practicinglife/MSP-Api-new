@@ -114,5 +114,5 @@ echo
 echo "Next steps:"
 echo "  1. Edit ${INSTALL_DIR}/.env with real API keys"
 echo "  2. cd ${INSTALL_DIR} && bash deploy/pull-and-restart.sh"
-echo "  3. Visit http://<server-ip>:${APP_PORT}/"
+echo "  3. Visit https://<server-ip>:${APP_PORT}/setup"
 echo "────────────────────────────────────────────────────────────"

@@ -184,11 +184,13 @@ async def _check_templates(ids: list[str]) -> int:
 
 
 def _make_certs(args: argparse.Namespace) -> None:
+    import os
     from pathlib import Path
 
     from app.tls import make_certs
 
-    paths = make_certs(Path(args.dir), args.name)
+    env_names = [n.strip() for n in os.environ.get("MSP_CERT_NAMES", "").split(",") if n.strip()]
+    paths = make_certs(Path(args.dir), [*args.name, *env_names])
     state = "Created" if paths.ca_created else "Kept existing"
     print(f"{state} CA:     {paths.ca_cert}  (keep {paths.ca_key} private)")
     print(f"Server certificate: {paths.server_cert}")
@@ -235,7 +237,7 @@ def main(argv: list[str] | None = None) -> None:
     ct.add_argument("ids", nargs="*", help="Template ids (default: all)")
     m = sub.add_parser("make-certs", help="Create a local CA (once) and an HTTPS certificate for localhost")
     m.add_argument("--dir", default="certs", help="Where to write the files (default: certs/)")
-    m.add_argument("--name", action="append", default=[], help="Extra hostname or IP to include (repeatable)")
+    m.add_argument("--name", action="append", default=[], help="Extra hostname or IP to include (repeatable; MSP_CERT_NAMES adds a comma-separated list)")
     args = parser.parse_args(argv)
     if args.cmd == "run":
         from pathlib import Path

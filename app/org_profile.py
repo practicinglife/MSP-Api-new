@@ -34,14 +34,14 @@ ORG_NAME = _env("MSP_ORG_NAME", "MSP API Tools")
 EDGE_DOMAIN = _env("MSP_EDGE_DOMAIN").lower()
 # Public URL used in OAuth metadata, sign-in redirects and links in change requests.
 EXTERNAL_BASE_URL = (
-    _env("MSP_EXTERNAL_BASE_URL") or (f"https://{EDGE_DOMAIN}" if EDGE_DOMAIN else "http://localhost:8000")
+    _env("MSP_EXTERNAL_BASE_URL") or (f"https://{EDGE_DOMAIN}" if EDGE_DOMAIN else "https://localhost:8000")
 ).rstrip("/")
 
 
 def external_base_url() -> str:
     """The public URL, read now (the Get started wizard can change it while the app runs)."""
     edge = _env("MSP_EDGE_DOMAIN").lower()
-    return (_env("MSP_EXTERNAL_BASE_URL") or (f"https://{edge}" if edge else "http://localhost:8000")).rstrip("/")
+    return (_env("MSP_EXTERNAL_BASE_URL") or (f"https://{edge}" if edge else "https://localhost:8000")).rstrip("/")
 
 
 # Office public IPs that count as "internal" when they arrive through the edge.

@@ -23,3 +23,7 @@ deploy
 *.db
 *.sqlite
 *.log
+# Local data, keys and certificates (data/master.key, SQLite, certs/*.key) — the container keeps its own in volumes
+data
+data.*
+certs

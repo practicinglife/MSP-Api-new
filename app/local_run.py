@@ -32,22 +32,26 @@ def _port_free(host: str, port: int) -> bool:
 
 
 def _lan_names() -> list[str]:
-    """This computer's name and private network addresses: where other computers reach it."""
+    """This computer's name and private network addresses: where other computers reach it. Inside a container
+    those are the container's own (unreachable from outside), so only MSP_CERT_NAMES counts there."""
     import ipaddress
 
     names: list[str] = []
-    try:
-        host = socket.gethostname()
-        addresses = socket.getaddrinfo(host, None, socket.AF_INET)
-    except OSError:
-        return names
-    if host and "." not in host:
-        names.append(host.lower())
-    for *_, sockaddr in addresses:
-        ip = ipaddress.ip_address(sockaddr[0])
-        if ip.is_private and not ip.is_loopback and not ip.is_link_local and str(ip) not in names:
-            names.append(str(ip))
-    return names
+    if not Path("/.dockerenv").exists():
+        try:
+            host = socket.gethostname()
+            addresses = socket.getaddrinfo(host, None, socket.AF_INET)
+        except OSError:
+            addresses = []
+            host = ""
+        if host and "." not in host:
+            names.append(host.lower())
+        for *_, sockaddr in addresses:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private and not ip.is_loopback and not ip.is_link_local and str(ip) not in names:
+                names.append(str(ip))
+    extra = [n.strip().lower() for n in os.environ.get("MSP_CERT_NAMES", "").split(",") if n.strip()]
+    return list(dict.fromkeys(names + extra))
 
 
 def _cert_names(path: Path) -> set[str]:
@@ -139,11 +143,11 @@ def prepare(data_dir: Path = DEFAULT_DATA, port: int = 443, packs: str | None = 
     base = "https://localhost" + ("" if port == 443 else f":{port}")
     os.environ.setdefault("MSP_EXTERNAL_BASE_URL", base)
     notes["url"] = os.environ["MSP_EXTERNAL_BASE_URL"]
-    notes.update(_certificate(make_certs))
+    notes.update(_certificate(make_certs, runtime.listen_address()))
     return notes
 
 
-def _certificate(make_certs) -> dict[str, str]:  # type: ignore[no-untyped-def]
+def _certificate(make_certs, listen: str) -> dict[str, str]:  # type: ignore[no-untyped-def]
     """The certificate to serve: one installed in Get started (Let's Encrypt / uploaded), else the local one."""
     from app import runtime
 
@@ -153,9 +157,10 @@ def _certificate(make_certs) -> dict[str, str]:  # type: ignore[no-untyped-def]
                 "cert": tls["cert"], "cert_key": tls["key"], "ca": ""}
     certs = Path("certs")
     note = f"from {certs}"
-    # Listening on the network: the local certificate also names this computer, so other computers that trust the
-    # local CA can use it. Re-issuing keeps the same CA.
-    names = _lan_names() if runtime.listen_address() == runtime.ALL_NETWORKS else []
+    # Listening on the network: the local certificate also names this computer (and MSP_CERT_NAMES, e.g. the
+    # Docker host's name and address), so other computers that trust the local CA can use it. Re-issuing keeps
+    # the same CA.
+    names = [] if listen.startswith("127.") else _lan_names()
     if not (certs / "server.crt").exists() or not (certs / "server.key").exists():
         paths = make_certs(certs, names)
         note = f"created ({paths.ca_cert} is the local CA)"
@@ -220,7 +225,7 @@ def run(host: str | None = None, port: int = 443, data_dir: Path = DEFAULT_DATA,
         from app.main import create_app
 
         runtime.apply_settings()
-        cert = _certificate(make_certs)
+        cert = _certificate(make_certs, host or runtime.listen_address())
         listen = host or runtime.listen_address()
         # timeout_graceful_shutdown: browsers keep idle connections open, which would hold a rebuild forever
         server = uvicorn.Server(uvicorn.Config(create_app(), host=listen, port=port, ssl_certfile=cert["cert"],

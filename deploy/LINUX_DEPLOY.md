@@ -19,7 +19,7 @@ Deploy this app to a Linux server with one bootstrap script and a one-shot deplo
 │        │                              │  save   │       │                            │
 │        ▼                              │ ──────► │       ▼ (bind-mounted)             │
 │  deploy/sync-to-server.ps1           │         │  uvicorn --reload restarts (~1 s)  │
-│  (file watcher + scp)                │         │  http://server-ip:8000/             │
+│  (file watcher + scp)                │         │  https://server-ip:8000/             │
 └──────────────────────────────────────┘         └────────────────────────────────────┘
 ```
 
@@ -70,7 +70,7 @@ Now in Visual Studio:
 - Edit any file in `app/`
 - Save (`Ctrl+S`)
 - See `↑ app/api/companies.py` in the sync console
-- Refresh `http://<server-ip>:8000/` — change is live
+- Refresh `https://<server-ip>:8000/` — change is live
 
 The watcher ignores `__pycache__`, `.pyc`, `.git`, `~` temp files.
 
@@ -219,7 +219,7 @@ bash deploy/pull-and-restart.sh
 
 You should see both containers in `Up` state and `✅ API responding on port 8000` at the end.
 
-Open from another machine: `http://<server-ip>:8000/`
+Open from another machine: `https://<server-ip>:8000/`
 
 ---
 
@@ -242,7 +242,7 @@ The script:
 1. Stages and commits any local changes (`deploy: 2026-04-19 15:30`)
 2. `git push origin master`
 3. SSHes to the server and runs `pull-and-restart.sh`
-4. Probes `http://server:8000/api/connectors` from your machine
+4. Probes `https://server:8000/health` from your machine
 
 ---
 
@@ -280,7 +280,7 @@ sudo systemctl restart ssh
 
 ## Optional: reverse proxy with TLS (Caddy — easiest)
 
-If you want `https://msp.yourdomain.com` instead of `http://ip:8000`:
+If you want `https://msp.yourdomain.com` instead of `https://ip:8000` (local CA certificate):
 
 ```bash
 sudo apt-get install -y caddy

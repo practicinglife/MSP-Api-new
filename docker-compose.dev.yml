@@ -5,7 +5,7 @@
 #
 # What this gives you:
 #   • app/ bind-mount kept alive (sync from Windows lands here)
-#   • uvicorn --reload watches app/ and restarts on every save (~1 s)
+#   • uvicorn --reload (HTTPS) watches app/ and restarts on every save (~1 s)
 #   • Postgres exposed on host port 5432 so you can DBeaver into it from Windows
 #   • DEBUG-level logging so you see every request
 #   • ngrok stays available (run with --profile tunnel if you want a public URL)
@@ -14,12 +14,15 @@
 
 services:
   app:
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    # HTTPS with the local CA certificate (certs/, kept in a volume); MSP_CERT_NAMES adds the server's name/address.
+    command: ["sh", "-c", "python -m app.cli make-certs >/dev/null && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --ssl-certfile certs/server.crt --ssl-keyfile certs/server.key --reload --reload-dir /app/app"]
     volumes:
       - ./app:/app/app                # live-mount the synced source
       - ./app/templates:/app/app/templates
       - ./app/static:/app/app/static
       - ./reports:/app/reports        # persist generated PDFs/HTML across restarts
+      - appdata:/app/data
+      - appcerts:/app/certs
     environment:
       LOG_LEVEL: DEBUG
       PYTHONUNBUFFERED: "1"

@@ -324,7 +324,7 @@ All routes are defined in `app/api/` and served under `/api/`. FastAPI auto-gene
 
 ## Frontend Dashboard
 
-A single-page HTML/JS dashboard served at `http://localhost:8000/` providing:
+A single-page HTML/JS dashboard served at `https://localhost:8000/` providing:
 
 - **Company summary table** — all companies with platform badges, device counts, match status
 - **Per-company breakdown** — drill into any company to see every device across all platforms, matched/missing status
@@ -455,7 +455,7 @@ Both containers (FastAPI app + PostgreSQL) start. The app auto-discovers which c
 
 ### 3. Open Dashboard
 
-Navigate to `http://localhost:8000` — the operator dashboard loads.
+Navigate to `https://localhost:8000` — the operator dashboard loads.
 
 ### 4. Scan
 
@@ -552,5 +552,5 @@ Download CSV reports for compliance reviews or client meetings.
 
 FastAPI auto-generates OpenAPI documentation at:
 
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `https://localhost:8000/docs`
+- **ReDoc**: `https://localhost:8000/redoc`

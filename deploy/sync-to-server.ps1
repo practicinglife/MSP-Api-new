@@ -5,7 +5,7 @@
 # changed file to the Linux server via scp. The container's uvicorn
 # --reload picks it up within ~1 second.
 #
-# Edit in Visual Studio as normal. Save. See it on http://server:8000.
+# Edit in Visual Studio as normal. Save. See it on https://server:8000.
 #
 # Usage:
 #   .\deploy\sync-to-server.ps1 -ServerIp 10.0.0.50

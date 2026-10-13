@@ -28,5 +28,5 @@
 - Use detailed conversation summaries with full technical inventory, code archaeology, progress tracking, and continuation plans so work can resume seamlessly after any interruption.
 
 ## Development Environment
-- Local development: `docker compose up` serves the app on `http://localhost:8000` with live-mounted code (`./app:/app/app`).
+- Local development: `docker compose up` serves the app on `https://localhost:8000` with live-mounted code (`./app:/app/app`).
 - Docker volume mount `./app:/app/app` added to docker-compose.yml so code changes are live without rebuild.

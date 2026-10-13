@@ -17,7 +17,7 @@
 
 ### On your dev PC (Visual Studio)
 1. Edit code normally — changes are live via volume mount
-2. Test at `http://localhost:8000`
+2. Test at `https://localhost:8000`
 3. When ready, commit and push:
    ```
    git add -A
@@ -63,7 +63,7 @@
 
 The app runs on port 8000. From other machines on your network:
 ```
-http://<server-ip>:8000
+https://<server-ip>:8000
 ```
 
 If you need external access, the ngrok service is already configured in docker-compose.yml.
