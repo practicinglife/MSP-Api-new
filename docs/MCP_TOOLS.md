@@ -46,8 +46,9 @@ Defined in [`app/mcp/servers.py`](../app/mcp/servers.py) and routed by
 Whether an operation counts as a read or a write comes from its definition when it is imported. For OpenAPI,
 Postman and cURL, `GET`/`HEAD`/`OPTIONS` requests are reads. For OData, list and get are reads. For SOAP, it is guessed from the
 operation name. For GraphQL, queries are reads and mutations are writes. For a proxied MCP server, it is the
-remote tool's `readOnlyHint`. SQL and MongoDB connections are read-only. An Approver can override the flag per
-operation (see the security notes in the README).
+remote tool's `readOnlyHint`. SQL and MongoDB connections are read-only. A shipped template can list
+vendor reads that use POST. An Approver can mark an operation as a write, but nobody can mark a write read-only
+by hand: the request is refused (see [SECURITY.md](SECURITY.md)).
 
 ---
 

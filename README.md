@@ -166,7 +166,7 @@ Enforced on the server, at four layers:
 
 1. **Middleware** (`app/security.py → _authorize`): admin paths need Admin or Approver; connection management needs Approver;
    other non-GET API calls need Editor and a `write` scope.
-2. **Scopes** (`Principal.allows`): the core MCP servers list and call only the connections the credential's scopes allow.
+2. **Scopes** (`Principal.allows`): the core MCP servers list and call only the connections the credential's scopes allow, and the MSP pack (`/msp/mcp` and its API) needs a `*:read` or `*:write` scope.
 3. **Tool call** (`org_mcp._handle`): `/msp` tools that change data need Editor. Proposal tools are open to all roles.
 4. **Write mode and change engine** (`app/auth/write_mode.py`, `app/services/changes.py`).
 
